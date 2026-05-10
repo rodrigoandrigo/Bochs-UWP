@@ -176,177 +176,330 @@
         Visibility="Collapsed"
         VerticalScrollBarVisibility="Auto">
       <Grid>
-        <StackPanel x:Name="bootPanel" Padding="12,10,12,24" Spacing="10">
-          <TextBlock Text="BIOS" Foreground="White" FontWeight="SemiBold" />
-          <StackPanel Orientation="Horizontal" Spacing="4">
-            <AppBarButton
-                x:Name="resetBiosButton"
-                Icon="Refresh"
-                Label="Usar embutida"
-                Click="ResetBiosButton_Click"
-                Foreground="White" />
-            <AppBarButton
-                x:Name="selectBiosButton"
-                Icon="OpenFile"
-                Label="Selecionar BIOS"
-                Click="SelectBiosButton_Click"
-                Foreground="White" />
-          </StackPanel>
-          <TextBlock
-              x:Name="biosPathText"
-              Text="BIOS-bochs-latest embutida"
-              Foreground="{StaticResource MutedTextBrush}"
-              TextWrapping="WrapWholeWords"
-              MaxWidth="920" />
-          <StackPanel Orientation="Horizontal" Spacing="4">
-            <AppBarButton
-                x:Name="resetVgaBiosButton"
-                Icon="Refresh"
-                Label="Usar embutida"
-                Click="ResetVgaBiosButton_Click"
-                Foreground="White" />
-            <AppBarButton
-                x:Name="selectVgaBiosButton"
-                Icon="OpenFile"
-                Label="Selecionar VGA BIOS"
-                Click="SelectVgaBiosButton_Click"
-                Foreground="White" />
-          </StackPanel>
-          <TextBlock
-              x:Name="vgaBiosPathText"
-              Text="VGABIOS-lgpl-latest.bin embutida"
-              Foreground="{StaticResource MutedTextBrush}"
-              TextWrapping="WrapWholeWords"
-              MaxWidth="920" />
-
-          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
-          <TextBlock Text="Floppy" Foreground="White" FontWeight="SemiBold" />
-          <StackPanel Orientation="Horizontal" Spacing="4">
-            <AppBarButton
-                x:Name="resetFloppyButton"
-                Icon="Delete"
-                Label="Remover"
-                Click="ResetFloppyButton_Click"
-                Foreground="White" />
-            <AppBarButton
-                x:Name="chooseFloppyButton"
-                Icon="OpenFile"
-                Label="Selecionar floppy"
-                Click="ChooseFloppyButton_Click"
-                Foreground="White" />
-          </StackPanel>
-          <TextBlock
-              x:Name="floppyPathText"
-              Text="Nenhum floppy selecionado"
-              Foreground="{StaticResource MutedTextBrush}"
-              TextWrapping="WrapWholeWords"
-              MaxWidth="920" />
-
-          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
-          <TextBlock Text="HDD" Foreground="White" FontWeight="SemiBold" />
-          <StackPanel Orientation="Horizontal" Spacing="4">
-            <AppBarButton
-                x:Name="resetDiskButton"
-                Icon="Delete"
-                Label="Remover"
-                Click="ResetDiskButton_Click"
-                Foreground="White" />
-            <AppBarButton
-                x:Name="chooseDiskButton"
-                Icon="OpenFile"
-                Label="Selecionar HDD"
-                Click="ChooseDiskButton_Click"
-                Foreground="White" />
-          </StackPanel>
-          <TextBlock
-              x:Name="diskPathText"
-              Text="Nenhuma imagem selecionada"
-              Foreground="{StaticResource MutedTextBrush}"
-              TextWrapping="WrapWholeWords"
-              MaxWidth="920" />
-          <StackPanel Orientation="Horizontal" Spacing="8">
+        <StackPanel x:Name="bootPanel" Padding="16,14,16,24" Spacing="14">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Boot" Foreground="White" FontSize="20" FontWeight="SemiBold" />
             <TextBlock
-                Text="Modo"
-                Foreground="White"
-                VerticalAlignment="Center" />
-            <ComboBox
-                x:Name="diskImageModeComboBox"
-                SelectedIndex="0"
-                SelectionChanged="DiskImageModeComboBox_SelectionChanged"
-                Width="220">
-              <ComboBoxItem Content="Automatico" Tag="auto" />
-              <ComboBoxItem Content="Raw / flat" Tag="flat" />
-              <ComboBoxItem Content="VHD / VirtualPC" Tag="vpc" />
-              <ComboBoxItem Content="VDI / VirtualBox" Tag="vbox" />
-              <ComboBoxItem Content="VMDK / VMware 4" Tag="vmware4" />
-              <ComboBoxItem Content="VMDK / VMware 3" Tag="vmware3" />
-              <ComboBoxItem Content="Sparse" Tag="sparse" />
-              <ComboBoxItem Content="Growing" Tag="growing" />
-              <ComboBoxItem Content="Undoable" Tag="undoable" />
-              <ComboBoxItem Content="Volatile" Tag="volatile" />
-            </ComboBox>
-            <TextBlock
-                x:Name="diskImageModeText"
-                Text="Modo efetivo: flat"
+                Text="Escolha as midias e a ordem de inicializacao antes de iniciar."
                 Foreground="{StaticResource MutedTextBrush}"
-                VerticalAlignment="Center"
                 TextWrapping="WrapWholeWords" />
           </StackPanel>
 
-          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
-          <TextBlock Text="ISO / CD-ROM" Foreground="White" FontWeight="SemiBold" />
-          <StackPanel Orientation="Horizontal" Spacing="4">
-            <AppBarButton
-                x:Name="resetCdromButton"
-                Icon="Delete"
-                Label="Remover"
-                Click="ResetCdromButton_Click"
-                Foreground="White" />
-            <AppBarButton
-                x:Name="chooseCdromButton"
-                Icon="OpenFile"
-                Label="Selecionar ISO"
-                Click="ChooseCdromButton_Click"
-                Foreground="White" />
-          </StackPanel>
-          <TextBlock
-              x:Name="cdromPathText"
-              Text="Nenhuma ISO selecionada"
-              Foreground="{StaticResource MutedTextBrush}"
-              TextWrapping="WrapWholeWords"
-              MaxWidth="920" />
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <StackPanel Spacing="8">
+              <TextBlock Text="ORDEM DE BOOT" Foreground="White" FontWeight="SemiBold" />
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <StackPanel Spacing="4" Width="128">
+                  <TextBlock Text="1" Foreground="{StaticResource MutedTextBrush}" />
+                  <ComboBox
+                      x:Name="bootDeviceComboBox"
+                      SelectedIndex="0"
+                      SelectionChanged="BootDeviceComboBox_SelectionChanged"
+                      Width="120">
+                    <ComboBoxItem Content="HDD" Tag="disk" />
+                    <ComboBoxItem Content="ISO" Tag="cdrom" />
+                    <ComboBoxItem Content="Floppy" Tag="floppy" />
+                  </ComboBox>
+                </StackPanel>
+                <StackPanel Spacing="4" Width="128">
+                  <TextBlock Text="2" Foreground="{StaticResource MutedTextBrush}" />
+                  <ComboBox
+                      x:Name="bootDevice2ComboBox"
+                      SelectedIndex="1"
+                      SelectionChanged="BootDeviceComboBox_SelectionChanged"
+                      Width="120">
+                    <ComboBoxItem Content="HDD" Tag="disk" />
+                    <ComboBoxItem Content="ISO" Tag="cdrom" />
+                    <ComboBoxItem Content="Floppy" Tag="floppy" />
+                    <ComboBoxItem Content="Nenhum" Tag="none" />
+                  </ComboBox>
+                </StackPanel>
+                <StackPanel Spacing="4" Width="128">
+                  <TextBlock Text="3" Foreground="{StaticResource MutedTextBrush}" />
+                  <ComboBox
+                      x:Name="bootDevice3ComboBox"
+                      SelectedIndex="2"
+                      SelectionChanged="BootDeviceComboBox_SelectionChanged"
+                      Width="120">
+                    <ComboBoxItem Content="HDD" Tag="disk" />
+                    <ComboBoxItem Content="ISO" Tag="cdrom" />
+                    <ComboBoxItem Content="Floppy" Tag="floppy" />
+                    <ComboBoxItem Content="Nenhum" Tag="none" />
+                  </ComboBox>
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <TextBlock Text="MIDIAS" Foreground="White" FontWeight="SemiBold" />
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="HDD" Foreground="White" FontWeight="SemiBold" />
+                <TextBlock Text="Disco instalavel" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="8" Margin="10,0,10,0" VerticalAlignment="Center">
+                <TextBlock
+                    x:Name="diskPathText"
+                    Text="Nenhuma imagem selecionada"
+                    Foreground="{StaticResource MutedTextBrush}"
+                    TextWrapping="WrapWholeWords" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="Modo" Foreground="White" VerticalAlignment="Center" />
+                  <ComboBox
+                      x:Name="diskImageModeComboBox"
+                      SelectedIndex="0"
+                      SelectionChanged="DiskImageModeComboBox_SelectionChanged"
+                      Width="220">
+                    <ComboBoxItem Content="Automatico" Tag="auto" />
+                    <ComboBoxItem Content="Raw / flat" Tag="flat" />
+                    <ComboBoxItem Content="VHD / VirtualPC" Tag="vpc" />
+                    <ComboBoxItem Content="VDI / VirtualBox" Tag="vbox" />
+                    <ComboBoxItem Content="VMDK / VMware 4" Tag="vmware4" />
+                    <ComboBoxItem Content="VMDK / VMware 3" Tag="vmware3" />
+                    <ComboBoxItem Content="Sparse" Tag="sparse" />
+                    <ComboBoxItem Content="Growing" Tag="growing" />
+                    <ComboBoxItem Content="Undoable" Tag="undoable" />
+                    <ComboBoxItem Content="Volatile" Tag="volatile" />
+                  </ComboBox>
+                  <TextBlock
+                      x:Name="diskImageModeText"
+                      Text="Modo efetivo: flat"
+                      Foreground="{StaticResource MutedTextBrush}"
+                      VerticalAlignment="Center"
+                      TextWrapping="WrapWholeWords" />
+                </StackPanel>
+              </StackPanel>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <AppBarButton
+                    x:Name="resetDiskButton"
+                    Icon="Delete"
+                    Label="Remover"
+                    Click="ResetDiskButton_Click"
+                    Foreground="White" />
+                <AppBarButton
+                    x:Name="chooseDiskButton"
+                    Icon="OpenFile"
+                    Label="Selecionar HDD"
+                    Click="ChooseDiskButton_Click"
+                    Foreground="White" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="ISO / CD-ROM" Foreground="White" FontWeight="SemiBold" />
+                <TextBlock Text="Live-CD ou instalador" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+              </StackPanel>
+              <TextBlock
+                  Grid.Column="1"
+                  x:Name="cdromPathText"
+                  Text="Nenhuma ISO selecionada"
+                  Foreground="{StaticResource MutedTextBrush}"
+                  TextWrapping="WrapWholeWords"
+                  Margin="10,0,10,0"
+                  VerticalAlignment="Center" />
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <AppBarButton
+                    x:Name="resetCdromButton"
+                    Icon="Delete"
+                    Label="Remover"
+                    Click="ResetCdromButton_Click"
+                    Foreground="White" />
+                <AppBarButton
+                    x:Name="chooseCdromButton"
+                    Icon="OpenFile"
+                    Label="Selecionar ISO"
+                    Click="ChooseCdromButton_Click"
+                    Foreground="White" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="Floppy" Foreground="White" FontWeight="SemiBold" />
+                <TextBlock Text="Imagem de disquete" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+              </StackPanel>
+              <TextBlock
+                  Grid.Column="1"
+                  x:Name="floppyPathText"
+                  Text="Nenhum floppy selecionado"
+                  Foreground="{StaticResource MutedTextBrush}"
+                  TextWrapping="WrapWholeWords"
+                  Margin="10,0,10,0"
+                  VerticalAlignment="Center" />
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <AppBarButton
+                    x:Name="resetFloppyButton"
+                    Icon="Delete"
+                    Label="Remover"
+                    Click="ResetFloppyButton_Click"
+                    Foreground="White" />
+                <AppBarButton
+                    x:Name="chooseFloppyButton"
+                    Icon="OpenFile"
+                    Label="Selecionar floppy"
+                    Click="ChooseFloppyButton_Click"
+                    Foreground="White" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <TextBlock Text="FIRMWARE" Foreground="White" FontWeight="SemiBold" />
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="BIOS" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <TextBlock
+                  Grid.Column="1"
+                  x:Name="biosPathText"
+                  Text="BIOS-bochs-latest embutida"
+                  Foreground="{StaticResource MutedTextBrush}"
+                  TextWrapping="WrapWholeWords"
+                  Margin="10,0,10,0"
+                  VerticalAlignment="Center" />
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <AppBarButton
+                    x:Name="resetBiosButton"
+                    Icon="Refresh"
+                    Label="Usar embutida"
+                    Click="ResetBiosButton_Click"
+                    Foreground="White" />
+                <AppBarButton
+                    x:Name="selectBiosButton"
+                    Icon="OpenFile"
+                    Label="Selecionar BIOS"
+                    Click="SelectBiosButton_Click"
+                    Foreground="White" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="VGA BIOS" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <TextBlock
+                  Grid.Column="1"
+                  x:Name="vgaBiosPathText"
+                  Text="VGABIOS-lgpl-latest.bin embutida"
+                  Foreground="{StaticResource MutedTextBrush}"
+                  TextWrapping="WrapWholeWords"
+                  Margin="10,0,10,0"
+                  VerticalAlignment="Center" />
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <AppBarButton
+                    x:Name="resetVgaBiosButton"
+                    Icon="Refresh"
+                    Label="Usar embutida"
+                    Click="ResetVgaBiosButton_Click"
+                    Foreground="White" />
+                <AppBarButton
+                    x:Name="selectVgaBiosButton"
+                    Icon="OpenFile"
+                    Label="Selecionar VGA BIOS"
+                    Click="SelectVgaBiosButton_Click"
+                    Foreground="White" />
+              </StackPanel>
+            </Grid>
+          </Border>
         </StackPanel>
 
         <StackPanel
             x:Name="settingsPanel"
-            Padding="12,10,12,24"
-            Spacing="10"
+            Padding="16,14,16,24"
+            Spacing="14"
             Visibility="Collapsed">
-          <TextBlock Text="MEMORIA" Foreground="White" FontWeight="SemiBold" />
-          <Slider
-              x:Name="memorySlider"
-              Minimum="16"
-              Maximum="8192"
-              Value="512"
-              StepFrequency="16"
-              ValueChanged="MemorySlider_ValueChanged"
-              Width="360"
-              HorizontalAlignment="Left"
-              Foreground="{StaticResource AccentBrush}" />
-          <TextBlock
-              x:Name="memoryValueText"
-              Text="512 MB"
-              Foreground="{StaticResource MutedTextBrush}" />
-          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
+          <StackPanel Spacing="4">
+            <TextBlock Text="Configuracoes" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock
+                Text="Ajustes de maquina, recursos e save-state."
+                Foreground="{StaticResource MutedTextBrush}"
+                TextWrapping="WrapWholeWords" />
+          </StackPanel>
 
           <TextBlock Text="MAQUINA" Foreground="White" FontWeight="SemiBold" />
-          <StackPanel Orientation="Horizontal" Spacing="18">
-            <StackPanel Spacing="4">
-              <TextBlock Text="CPU" Foreground="White" />
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="110" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="Memoria" Foreground="White" FontWeight="SemiBold" />
+                <TextBlock Text="Guest RAM" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+              </StackPanel>
+              <Slider
+                  Grid.Column="1"
+                  x:Name="memorySlider"
+                  Minimum="16"
+                  Maximum="8192"
+                  Value="512"
+                  StepFrequency="16"
+                  ValueChanged="MemorySlider_ValueChanged"
+                  Margin="10,0,14,0"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Center"
+                  Foreground="{StaticResource AccentBrush}" />
+              <TextBlock
+                  Grid.Column="2"
+                  x:Name="memoryValueText"
+                  Text="512 MB"
+                  Foreground="White"
+                  FontSize="18"
+                  FontWeight="SemiBold"
+                  VerticalAlignment="Center"
+                  TextAlignment="Right" />
+            </Grid>
+          </Border>
+
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBlock
+                  Grid.Column="0"
+                  Text="CPU"
+                  Foreground="White"
+                  FontWeight="SemiBold"
+                  VerticalAlignment="Center" />
               <ComboBox
+                  Grid.Column="1"
                   x:Name="cpuModelComboBox"
                   SelectedIndex="24"
-                  Width="360">
+                  Width="520"
+                  Margin="10,0,0,0"
+                  HorizontalAlignment="Left">
                 <ComboBoxItem Content="i386 - Intel 386SX" Tag="i386" />
                 <ComboBoxItem Content="i486dx4 - Intel 486DX4" Tag="i486dx4" />
                 <ComboBoxItem Content="pentium - Intel Pentium" Tag="pentium" />
@@ -380,67 +533,75 @@
                 <ComboBoxItem Content="sapphire_rapids - Intel Xeon w9-3475X" Tag="sapphire_rapids" />
                 <ComboBoxItem Content="arrow_lake - Intel Core Ultra 5 245K" Tag="arrow_lake" />
               </ComboBox>
-            </StackPanel>
-            <StackPanel Spacing="4">
-              <TextBlock Text="Boot" Foreground="White" />
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <ComboBox
-                    x:Name="bootDeviceComboBox"
-                    SelectedIndex="0"
-                    SelectionChanged="BootDeviceComboBox_SelectionChanged"
-                    Width="88">
-                  <ComboBoxItem Content="HDD" Tag="disk" />
-                  <ComboBoxItem Content="ISO" Tag="cdrom" />
-                  <ComboBoxItem Content="Floppy" Tag="floppy" />
-                </ComboBox>
-                <ComboBox
-                    x:Name="bootDevice2ComboBox"
-                    SelectedIndex="1"
-                    SelectionChanged="BootDeviceComboBox_SelectionChanged"
-                    Width="88">
-                  <ComboBoxItem Content="HDD" Tag="disk" />
-                  <ComboBoxItem Content="ISO" Tag="cdrom" />
-                  <ComboBoxItem Content="Floppy" Tag="floppy" />
-                  <ComboBoxItem Content="Nenhum" Tag="none" />
-                </ComboBox>
-                <ComboBox
-                    x:Name="bootDevice3ComboBox"
-                    SelectedIndex="2"
-                    SelectionChanged="BootDeviceComboBox_SelectionChanged"
-                    Width="88">
-                  <ComboBoxItem Content="HDD" Tag="disk" />
-                  <ComboBoxItem Content="ISO" Tag="cdrom" />
-                  <ComboBoxItem Content="Floppy" Tag="floppy" />
-                  <ComboBoxItem Content="Nenhum" Tag="none" />
-                </ComboBox>
-              </StackPanel>
-            </StackPanel>
-          </StackPanel>
+            </Grid>
+          </Border>
 
-          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
-          <TextBlock Text="AUDIO E REDE" Foreground="White" FontWeight="SemiBold" />
-          <ToggleSwitch x:Name="soundToggleSwitch" Header="Som SB16/ES1370 via XAudio2" IsOn="True" OnContent="On" OffContent="Off" Foreground="White" />
-          <ToggleSwitch x:Name="networkToggleSwitch" Header="Rede NE2K via slirp" IsOn="True" OnContent="On" OffContent="Off" Foreground="White" />
+          <TextBlock Text="RECURSOS" Foreground="White" FontWeight="SemiBold" />
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Audio" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <ToggleSwitch
+                  Grid.Row="0"
+                  Grid.Column="1"
+                  x:Name="soundToggleSwitch"
+                  Header="SB16/ES1370 via XAudio2"
+                  IsOn="True"
+                  OnContent="On"
+                  OffContent="Off"
+                  Foreground="White"
+                  Margin="10,0,0,8" />
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Rede" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <ToggleSwitch
+                  Grid.Row="1"
+                  Grid.Column="1"
+                  x:Name="networkToggleSwitch"
+                  Header="NE2K via slirp"
+                  IsOn="True"
+                  OnContent="On"
+                  OffContent="Off"
+                  Foreground="White"
+                  Margin="10,8,0,0" />
+            </Grid>
+          </Border>
 
-          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
           <TextBlock Text="SAVE STATE" Foreground="White" FontWeight="SemiBold" />
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <ComboBox
-                x:Name="saveStateSlotComboBox"
-                SelectedIndex="0"
-                SelectionChanged="SaveStateSlotComboBox_SelectionChanged"
-                Width="150">
-              <ComboBoxItem Content="Slot 1" Tag="1" />
-              <ComboBoxItem Content="Slot 2" Tag="2" />
-              <ComboBoxItem Content="Slot 3" Tag="3" />
-            </ComboBox>
-            <TextBlock
-                x:Name="saveStateSlotStatusText"
-                Text="Verificando slot..."
-                Foreground="{StaticResource MutedTextBrush}"
-                VerticalAlignment="Center"
-                TextWrapping="WrapWholeWords" />
-          </StackPanel>
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Slot" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <ComboBox
+                  Grid.Column="1"
+                  x:Name="saveStateSlotComboBox"
+                  SelectedIndex="0"
+                  SelectionChanged="SaveStateSlotComboBox_SelectionChanged"
+                  Width="150"
+                  Margin="10,0,0,0">
+                <ComboBoxItem Content="Slot 1" Tag="1" />
+                <ComboBoxItem Content="Slot 2" Tag="2" />
+                <ComboBoxItem Content="Slot 3" Tag="3" />
+              </ComboBox>
+              <TextBlock
+                  Grid.Column="2"
+                  x:Name="saveStateSlotStatusText"
+                  Text="Verificando slot..."
+                  Foreground="{StaticResource MutedTextBrush}"
+                  VerticalAlignment="Center"
+                  TextWrapping="WrapWholeWords"
+                  Margin="10,0,0,0" />
+            </Grid>
+          </Border>
         </StackPanel>
 
         <StackPanel
@@ -470,27 +631,39 @@
 
         <StackPanel
             x:Name="problemsPanel"
-            Padding="12,10,12,24"
-            Spacing="8"
+            Padding="16,14,16,24"
+            Spacing="14"
             Visibility="Collapsed">
-          <TextBlock Text="Problemas" Foreground="White" FontWeight="SemiBold" />
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <AppBarButton
-                x:Name="clearProblemsButton"
-                Icon="Delete"
-                Label="Limpar"
-                Click="ClearProblemsButton_Click"
-                Foreground="White" />
-            <TextBlock
-                x:Name="problemCountText"
-                Text="0 eventos"
-                Foreground="{StaticResource MutedTextBrush}"
-                VerticalAlignment="Center" />
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Problemas" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock
+                  Text="Diagnostico da sessao atual."
+                  Foreground="{StaticResource MutedTextBrush}"
+                  TextWrapping="WrapWholeWords" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+              <TextBlock
+                  x:Name="problemCountText"
+                  Text="0 eventos"
+                  Foreground="White"
+                  FontWeight="SemiBold"
+                  VerticalAlignment="Center" />
+              <AppBarButton
+                  x:Name="clearProblemsButton"
+                  Icon="Delete"
+                  Label="Limpar"
+                  Click="ClearProblemsButton_Click"
+                  Foreground="White"
+                  IsCompact="True" />
+            </StackPanel>
           </StackPanel>
+
+          <TextBlock Text="RESUMO" Foreground="White" FontWeight="SemiBold" />
           <Border
               BorderBrush="{StaticResource SectionLineBrush}"
               BorderThickness="1"
-              Padding="10"
+              Padding="12"
               MinHeight="96">
             <TextBlock
                 x:Name="diagnosticSummaryText"
@@ -498,10 +671,12 @@
                 TextWrapping="WrapWholeWords"
                 Text="Diagnostico ainda nao calculado." />
           </Border>
+
+          <TextBlock Text="LOG" Foreground="White" FontWeight="SemiBold" />
           <Border
               BorderBrush="{StaticResource SectionLineBrush}"
               BorderThickness="1"
-              Padding="10"
+              Padding="12"
               MinHeight="360">
             <RichTextBlock
                 x:Name="problemLogRichTextBlock"
@@ -519,28 +694,25 @@
 
         <StackPanel
             x:Name="aboutPanel"
-            Padding="12,10,12,24"
-            Spacing="8"
+            Padding="16,14,16,24"
+            Spacing="14"
             Visibility="Collapsed">
-          <TextBlock Text="Sobre" Foreground="White" FontWeight="SemiBold" />
-          <TextBlock
-              Text="UWP-Port e uma versao UWP do Bochs com renderizacao DirectX, configuracao interna de boot, suporte a HDD/floppy/ISO, save-state por slots, diagnosticos, entrada de teclado e mouse, audio nativo e rede slirp."
-              Foreground="{StaticResource MutedTextBrush}"
-              TextWrapping="WrapWholeWords"
-              MaxWidth="960" />
+          <StackPanel Spacing="4">
+            <TextBlock Text="Sobre" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock
+                Text="Resumo do app"
+                Foreground="{StaticResource MutedTextBrush}" />
+          </StackPanel>
           <Border
               BorderBrush="{StaticResource SectionLineBrush}"
               BorderThickness="1"
-              Padding="10"
+              Padding="12"
               MaxWidth="960"
               HorizontalAlignment="Left">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Resumo do app" Foreground="White" FontWeight="SemiBold" />
-              <TextBlock
-                Text="O app prepara uma configuracao bochsrc a partir da interface, inicia o core Bochs embutido e exibe o framebuffer em um SwapChainPanel. Os paineis permitem escolher imagens, ajustar memoria e CPU, alternar audio/rede, acompanhar problemas e revisar a configuracao final antes do boot."
-                Foreground="{StaticResource MutedTextBrush}"
-                TextWrapping="WrapWholeWords" />
-            </StackPanel>
+            <TextBlock
+              Text="UWP-Port e uma versao UWP do Bochs que integra o core do emulador a uma interface DirectX. O app prepara a configuracao de boot, monta imagens de HDD, floppy e ISO, oferece ajustes de maquina, save-state por slots, diagnosticos, audio nativo, rede slirp e entrada de teclado/mouse em uma experiencia unica para Windows."
+              Foreground="{StaticResource MutedTextBrush}"
+              TextWrapping="WrapWholeWords" />
           </Border>
         </StackPanel>
       </Grid>

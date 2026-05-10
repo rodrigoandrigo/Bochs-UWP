@@ -836,7 +836,9 @@ void DirectXPage::StartPreparedEmulator(bool restoreSavedState)
 		m_main->StartRenderLoop();
 		m_emulationStarted = true;
 		m_emulationPaused = false;
+		m_tabsEnabled = false;
 		readyOverlay->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
+		topChrome->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 		configurationPanel->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 		UpdateCommandState();
 		MonitorStartupAfterDelay();
@@ -900,7 +902,9 @@ void DirectXPage::StartPreparedEmulator(bool restoreSavedState)
 		m_main->StartRenderLoop();
 		m_emulationStarted = true;
 		m_emulationPaused = false;
+		m_tabsEnabled = false;
 		readyOverlay->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
+		topChrome->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 		configurationPanel->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 		UpdateCommandState();
 		MonitorStartupAfterDelay();
