@@ -203,6 +203,7 @@ DirectXPage::DirectXPage() :
 	m_selectedDiskPath(nullptr),
 	m_selectedFloppyPath(nullptr),
 	m_selectedCdromPath(nullptr),
+	m_selectedSharedFolderPath(nullptr),
 	m_bootTarget(ref new String(L"disk, cdrom, floppy")),
 	m_selectedBiosPath(nullptr),
 	m_selectedVgaBiosPath(nullptr),
@@ -438,7 +439,7 @@ void DirectXPage::ChooseDiskButton_Click(Object^ sender, RoutedEventArgs^ e)
 
 	chooseDiskButton->IsEnabled = false;
 	startEmulatorButton->IsEnabled = false;
-	startupStatusText->Text = "Selecionando imagem...";
+	startupStatusText->Text = "Selecting image...";
 
 	BochsUwpStorage::PickDiskImageToLocalFolderAsync().then([this](task<String^> pickTask)
 	{
@@ -450,13 +451,13 @@ void DirectXPage::ChooseDiskButton_Click(Object^ sender, RoutedEventArgs^ e)
 		}
 		catch (...)
 		{
-			HandleAsyncFailure("Nao foi possivel selecionar a imagem de HDD.");
+			HandleAsyncFailure("Could not select the HDD image.");
 			return;
 		}
 
 		if (diskPath == nullptr || diskPath->Length() == 0)
 		{
-			startupStatusText->Text = "Selecao cancelada.";
+			startupStatusText->Text = "Selection canceled.";
 			startEmulatorButton->IsEnabled = false;
 			UpdateCommandState();
 			return;
@@ -465,11 +466,11 @@ void DirectXPage::ChooseDiskButton_Click(Object^ sender, RoutedEventArgs^ e)
 		m_selectedDiskPath = diskPath;
 		SetBootSequencePrimary(L"disk");
 		diskPathText->Text = diskPath;
-		chooseDiskButton->Label = ref new String(L"Alterar HDD");
+		chooseDiskButton->Label = ref new String(L"Change HDD");
 		UpdateDiskImageModeLabel();
-		std::wstring status(L"HDD selecionado. Modo ");
+		std::wstring status(L"HDD selected. Mode ");
 		status += EffectiveDiskImageMode()->Data();
-		status += L"; boot ajustado para disco.";
+		status += L"; boot set to disk.";
 		startupStatusText->Text = ref new String(status.c_str());
 		UpdateCommandState();
 	}, task_continuation_context::use_current());
@@ -488,10 +489,10 @@ void DirectXPage::ResetDiskButton_Click(Object^ sender, RoutedEventArgs^ e)
 	SetBootSequencePrimary(m_selectedCdromPath != nullptr && m_selectedCdromPath->Length() > 0
 		? L"cdrom"
 		: (m_selectedFloppyPath != nullptr && m_selectedFloppyPath->Length() > 0 ? L"floppy" : L"disk"));
-	diskPathText->Text = "Nenhuma imagem selecionada";
+	diskPathText->Text = "No image selected";
 	UpdateDiskImageModeLabel();
-	chooseDiskButton->Label = ref new String(L"Selecionar HDD");
-	startupStatusText->Text = "HDD removido.";
+	chooseDiskButton->Label = ref new String(L"Select HDD");
+	startupStatusText->Text = "HDD removed.";
 	UpdateCommandState();
 }
 
@@ -506,7 +507,7 @@ void DirectXPage::ChooseFloppyButton_Click(Object^ sender, RoutedEventArgs^ e)
 
 	chooseFloppyButton->IsEnabled = false;
 	startEmulatorButton->IsEnabled = false;
-	startupStatusText->Text = "Selecionando floppy...";
+	startupStatusText->Text = "Selecting floppy...";
 
 	BochsUwpStorage::PickFloppyImageToLocalFolderAsync().then([this](task<String^> pickTask)
 	{
@@ -517,13 +518,13 @@ void DirectXPage::ChooseFloppyButton_Click(Object^ sender, RoutedEventArgs^ e)
 		}
 		catch (...)
 		{
-			HandleAsyncFailure("Nao foi possivel selecionar o floppy.");
+			HandleAsyncFailure("Could not select the floppy.");
 			return;
 		}
 
 		if (floppyPath == nullptr || floppyPath->Length() == 0)
 		{
-			startupStatusText->Text = "Selecao de floppy cancelada.";
+			startupStatusText->Text = "Floppy selection canceled.";
 			UpdateCommandState();
 			return;
 		}
@@ -531,8 +532,8 @@ void DirectXPage::ChooseFloppyButton_Click(Object^ sender, RoutedEventArgs^ e)
 		m_selectedFloppyPath = floppyPath;
 		SetBootSequencePrimary(L"floppy");
 		floppyPathText->Text = floppyPath;
-		chooseFloppyButton->Label = ref new String(L"Alterar floppy");
-		startupStatusText->Text = "Floppy selecionado. Boot ajustado para floppy.";
+		chooseFloppyButton->Label = ref new String(L"Change floppy");
+		startupStatusText->Text = "Floppy selected. Boot set to floppy.";
 		UpdateCommandState();
 	}, task_continuation_context::use_current());
 }
@@ -550,9 +551,9 @@ void DirectXPage::ResetFloppyButton_Click(Object^ sender, RoutedEventArgs^ e)
 	SetBootSequencePrimary(m_selectedDiskPath != nullptr && m_selectedDiskPath->Length() > 0
 		? L"disk"
 		: (m_selectedCdromPath != nullptr && m_selectedCdromPath->Length() > 0 ? L"cdrom" : L"disk"));
-	floppyPathText->Text = "Nenhum floppy selecionado";
-	chooseFloppyButton->Label = ref new String(L"Selecionar floppy");
-	startupStatusText->Text = "Floppy removido.";
+	floppyPathText->Text = "No floppy selected";
+	chooseFloppyButton->Label = ref new String(L"Select floppy");
+	startupStatusText->Text = "Floppy removed.";
 	UpdateCommandState();
 }
 
@@ -567,7 +568,7 @@ void DirectXPage::ChooseCdromButton_Click(Object^ sender, RoutedEventArgs^ e)
 
 	chooseCdromButton->IsEnabled = false;
 	startEmulatorButton->IsEnabled = false;
-	startupStatusText->Text = "Selecionando ISO...";
+	startupStatusText->Text = "Selecting ISO...";
 
 	BochsUwpStorage::PickCdromImageToLocalFolderAsync().then([this](task<String^> pickTask)
 	{
@@ -578,13 +579,13 @@ void DirectXPage::ChooseCdromButton_Click(Object^ sender, RoutedEventArgs^ e)
 		}
 		catch (...)
 		{
-			HandleAsyncFailure("Nao foi possivel selecionar a ISO.");
+			HandleAsyncFailure("Could not select the ISO.");
 			return;
 		}
 
 		if (cdromPath == nullptr || cdromPath->Length() == 0)
 		{
-			startupStatusText->Text = "Selecao de ISO cancelada.";
+			startupStatusText->Text = "ISO selection canceled.";
 			UpdateCommandState();
 			return;
 		}
@@ -592,8 +593,8 @@ void DirectXPage::ChooseCdromButton_Click(Object^ sender, RoutedEventArgs^ e)
 		m_selectedCdromPath = cdromPath;
 		SetBootSequencePrimary(L"cdrom");
 		cdromPathText->Text = cdromPath;
-		chooseCdromButton->Label = ref new String(L"Alterar ISO");
-		startupStatusText->Text = "ISO selecionada. Boot ajustado para ISO.";
+		chooseCdromButton->Label = ref new String(L"Change ISO");
+		startupStatusText->Text = "ISO selected. Boot set to ISO.";
 		UpdateCommandState();
 	}, task_continuation_context::use_current());
 }
@@ -611,9 +612,65 @@ void DirectXPage::ResetCdromButton_Click(Object^ sender, RoutedEventArgs^ e)
 	SetBootSequencePrimary(m_selectedDiskPath != nullptr && m_selectedDiskPath->Length() > 0
 		? L"disk"
 		: (m_selectedFloppyPath != nullptr && m_selectedFloppyPath->Length() > 0 ? L"floppy" : L"disk"));
-	cdromPathText->Text = "Nenhuma ISO selecionada";
-	chooseCdromButton->Label = ref new String(L"Selecionar ISO");
-	startupStatusText->Text = "ISO removida.";
+	cdromPathText->Text = "No ISO selected";
+	chooseCdromButton->Label = ref new String(L"Select ISO");
+	startupStatusText->Text = "ISO removed.";
+	UpdateCommandState();
+}
+
+void DirectXPage::ChooseSharedFolderButton_Click(Object^ sender, RoutedEventArgs^ e)
+{
+	UNREFERENCED_PARAMETER(sender);
+	UNREFERENCED_PARAMETER(e);
+	if (m_emulationStarted)
+	{
+		return;
+	}
+
+	chooseSharedFolderButton->IsEnabled = false;
+	startupStatusText->Text = "Selecting VVFAT shared folder...";
+
+	BochsUwpStorage::PickSharedFolderAsync().then([this](task<String^> pickTask)
+	{
+		String^ sharedFolderPath = nullptr;
+		try
+		{
+			sharedFolderPath = pickTask.get();
+		}
+		catch (...)
+		{
+			HandleAsyncFailure("Could not select the shared folder.");
+			return;
+		}
+
+		if (sharedFolderPath == nullptr || sharedFolderPath->Length() == 0)
+		{
+			startupStatusText->Text = "Folder selection canceled.";
+			UpdateCommandState();
+			return;
+		}
+
+		m_selectedSharedFolderPath = sharedFolderPath;
+		sharedFolderPathText->Text = sharedFolderPath;
+		chooseSharedFolderButton->Label = ref new String(L"Change folder");
+		startupStatusText->Text = "Shared folder active through read-only VVFAT.";
+		UpdateCommandState();
+	}, task_continuation_context::use_current());
+}
+
+void DirectXPage::ResetSharedFolderButton_Click(Object^ sender, RoutedEventArgs^ e)
+{
+	UNREFERENCED_PARAMETER(sender);
+	UNREFERENCED_PARAMETER(e);
+	if (m_emulationStarted)
+	{
+		return;
+	}
+
+	m_selectedSharedFolderPath = nullptr;
+	sharedFolderPathText->Text = "No folder selected";
+	chooseSharedFolderButton->Label = ref new String(L"Select folder");
+	startupStatusText->Text = "Shared folder removed.";
 	UpdateCommandState();
 }
 
@@ -627,7 +684,7 @@ void DirectXPage::SelectBiosButton_Click(Object^ sender, RoutedEventArgs^ e)
 	}
 
 	selectBiosButton->IsEnabled = false;
-	startupStatusText->Text = "Selecionando BIOS...";
+	startupStatusText->Text = "Selecting BIOS...";
 	BochsUwpStorage::PickBiosImageToLocalFolderAsync().then([this](task<String^> pickTask)
 	{
 		String^ biosPath = nullptr;
@@ -637,21 +694,21 @@ void DirectXPage::SelectBiosButton_Click(Object^ sender, RoutedEventArgs^ e)
 		}
 		catch (...)
 		{
-			HandleAsyncFailure("Nao foi possivel selecionar a BIOS.");
+			HandleAsyncFailure("Could not select the BIOS.");
 			return;
 		}
 
 		if (biosPath == nullptr || biosPath->Length() == 0)
 		{
-			startupStatusText->Text = "Selecao de BIOS cancelada.";
+			startupStatusText->Text = "BIOS selection canceled.";
 			UpdateCommandState();
 			return;
 		}
 
 		m_selectedBiosPath = biosPath;
 		biosPathText->Text = biosPath;
-		selectBiosButton->Label = ref new String(L"Alterar BIOS");
-		startupStatusText->Text = "BIOS customizada selecionada.";
+		selectBiosButton->Label = ref new String(L"Change BIOS");
+		startupStatusText->Text = "Custom BIOS selected.";
 		UpdateCommandState();
 	}, task_continuation_context::use_current());
 }
@@ -666,9 +723,9 @@ void DirectXPage::ResetBiosButton_Click(Object^ sender, RoutedEventArgs^ e)
 	}
 
 	m_selectedBiosPath = nullptr;
-	biosPathText->Text = "BIOS-bochs-latest embutida";
-	selectBiosButton->Label = ref new String(L"Selecionar BIOS");
-	startupStatusText->Text = "BIOS embutida restaurada.";
+	biosPathText->Text = "Built-in BIOS-bochs-latest";
+	selectBiosButton->Label = ref new String(L"Select BIOS");
+	startupStatusText->Text = "Built-in BIOS restored.";
 	UpdateCommandState();
 }
 
@@ -682,7 +739,7 @@ void DirectXPage::SelectVgaBiosButton_Click(Object^ sender, RoutedEventArgs^ e)
 	}
 
 	selectVgaBiosButton->IsEnabled = false;
-	startupStatusText->Text = "Selecionando VGA BIOS...";
+	startupStatusText->Text = "Selecting VGA BIOS...";
 	BochsUwpStorage::PickBiosImageToLocalFolderAsync().then([this](task<String^> pickTask)
 	{
 		String^ vgaBiosPath = nullptr;
@@ -692,21 +749,21 @@ void DirectXPage::SelectVgaBiosButton_Click(Object^ sender, RoutedEventArgs^ e)
 		}
 		catch (...)
 		{
-			HandleAsyncFailure("Nao foi possivel selecionar a VGA BIOS.");
+			HandleAsyncFailure("Could not select the VGA BIOS.");
 			return;
 		}
 
 		if (vgaBiosPath == nullptr || vgaBiosPath->Length() == 0)
 		{
-			startupStatusText->Text = "Selecao de VGA BIOS cancelada.";
+			startupStatusText->Text = "VGA BIOS selection canceled.";
 			UpdateCommandState();
 			return;
 		}
 
 		m_selectedVgaBiosPath = vgaBiosPath;
 		vgaBiosPathText->Text = vgaBiosPath;
-		selectVgaBiosButton->Label = ref new String(L"Alterar VGA BIOS");
-		startupStatusText->Text = "VGA BIOS customizada selecionada.";
+		selectVgaBiosButton->Label = ref new String(L"Change VGA BIOS");
+		startupStatusText->Text = "Custom VGA BIOS selected.";
 		UpdateCommandState();
 	}, task_continuation_context::use_current());
 }
@@ -721,9 +778,9 @@ void DirectXPage::ResetVgaBiosButton_Click(Object^ sender, RoutedEventArgs^ e)
 	}
 
 	m_selectedVgaBiosPath = nullptr;
-	vgaBiosPathText->Text = "VGABIOS-lgpl-latest.bin embutida";
-	selectVgaBiosButton->Label = ref new String(L"Selecionar VGA BIOS");
-	startupStatusText->Text = "VGA BIOS embutida restaurada.";
+	vgaBiosPathText->Text = "Built-in VGABIOS-lgpl-latest.bin";
+	selectVgaBiosButton->Label = ref new String(L"Select VGA BIOS");
+	startupStatusText->Text = "Built-in VGA BIOS restored.";
 	UpdateCommandState();
 }
 
@@ -737,22 +794,22 @@ void DirectXPage::StartEmulatorButton_Click(Object^ sender, RoutedEventArgs^ e)
 		(m_selectedCdromPath == nullptr || m_selectedCdromPath->Length() == 0) &&
 		!m_saveStateAvailable)
 	{
-		startupStatusText->Text = "Escolha uma imagem de HDD, floppy ou ISO antes de iniciar.";
-		AppendProblemLog("Inicio bloqueado: nenhuma imagem de boot ou estado salvo foi selecionado.");
+		startupStatusText->Text = "Choose an HDD, floppy or ISO image before starting.";
+		AppendProblemLog("Start blocked: no boot image or saved state was selected.");
 		return;
 	}
 
 	if (m_saveStateAvailable)
 	{
 		String^ slotLabel = SelectedSaveStateSlotLabel();
-		std::wstring message(L"Existe um estado salvo no ");
+		std::wstring message(L"A saved state exists in ");
 		message += slotLabel->Data();
-		message += L". Deseja restaurar essa sessao?";
+		message += L". Restore this session?";
 		MessageDialog^ dialog = ref new MessageDialog(
 			ref new String(message.c_str()),
-			"Estado salvo encontrado");
-		UICommand^ restoreCommand = ref new UICommand("Restaurar");
-		UICommand^ newCommand = ref new UICommand("Iniciar novo");
+			"Saved state found");
+		UICommand^ restoreCommand = ref new UICommand("Restore");
+		UICommand^ newCommand = ref new UICommand("Start new");
 		dialog->Commands->Append(restoreCommand);
 		dialog->Commands->Append(newCommand);
 		dialog->DefaultCommandIndex = 0;
@@ -767,7 +824,7 @@ void DirectXPage::StartEmulatorButton_Click(Object^ sender, RoutedEventArgs^ e)
 			}
 			catch (...)
 			{
-				HandleAsyncFailure("Nao foi possivel abrir a escolha de restauracao.");
+				HandleAsyncFailure("Could not open the restore choice.");
 				return;
 			}
 			StartPreparedEmulator(command == restoreCommand);
@@ -806,14 +863,14 @@ void DirectXPage::CheckForSavedState()
 		if (saveStateSlotStatusText != nullptr)
 		{
 			std::wstring text(slotLabel->Data());
-			text += hasSaveState ? L": estado salvo disponivel" : L": vazio";
+			text += hasSaveState ? L": saved state available" : L": empty";
 			saveStateSlotStatusText->Text = ref new String(text.c_str());
 		}
 		if (hasSaveState && !m_emulationStarted)
 		{
-			std::wstring text(L"Estado salvo encontrado em ");
+			std::wstring text(L"Saved state found in ");
 			text += slotLabel->Data();
-			text += L". Clique em Iniciar para restaurar ou iniciar novo.";
+			text += L". Click Start to restore or start new.";
 			startupStatusText->Text = ref new String(text.c_str());
 		}
 		UpdateCommandState();
@@ -827,7 +884,7 @@ void DirectXPage::StartPreparedEmulator(bool restoreSavedState)
 
 	if (restoreSavedState)
 	{
-		std::wstring status(L"Restaurando ");
+		std::wstring status(L"Restoring ");
 		status += SelectedSaveStateSlotLabel()->Data();
 		status += L"...";
 		startupStatusText->Text = ref new String(status.c_str());
@@ -851,18 +908,19 @@ void DirectXPage::StartPreparedEmulator(bool restoreSavedState)
 	{
 		chooseDiskButton->IsEnabled = true;
 		startEmulatorButton->IsEnabled = m_saveStateAvailable;
-		startupStatusText->Text = "Escolha uma imagem de HDD, floppy ou ISO para iniciar uma sessao nova.";
+		startupStatusText->Text = "Choose an HDD, floppy or ISO image to start a new session.";
 		UpdateCommandState();
 		return;
 	}
 
-	startupStatusText->Text = "Preparando configuracao...";
+	startupStatusText->Text = "Preparing configuration...";
 	UpdateBochsrcPreview();
 	m_bootTarget = SelectedBootSequence();
 	BochsUwpStorage::CreateConfigAsync(
 		m_selectedDiskPath,
 		m_selectedFloppyPath,
 		m_selectedCdromPath,
+		m_selectedSharedFolderPath,
 		m_bootTarget,
 		SelectedMemoryMb(),
 		SelectedCpuModel(),
@@ -879,25 +937,25 @@ void DirectXPage::StartPreparedEmulator(bool restoreSavedState)
 		}
 		catch (Platform::Exception^ ex)
 		{
-			HandleAsyncFailure(FormatPlatformFailure(L"Nao foi possivel preparar a configuracao", ex));
+			HandleAsyncFailure(FormatPlatformFailure(L"Could not prepare the configuration", ex));
 			return;
 		}
 		catch (const std::exception& ex)
 		{
-			HandleAsyncFailure(FormatStdFailure(L"Nao foi possivel preparar a configuracao", ex));
+			HandleAsyncFailure(FormatStdFailure(L"Could not prepare the configuration", ex));
 			return;
 		}
 		catch (...)
 		{
-			HandleAsyncFailure("Nao foi possivel preparar a configuracao.");
+			HandleAsyncFailure("Could not prepare the configuration.");
 			return;
 		}
 		if (configPath == nullptr || configPath->Length() == 0)
 		{
-			HandleAsyncFailure("A configuracao gerada esta vazia.");
+			HandleAsyncFailure("The generated configuration is empty.");
 			return;
 		}
-		startupStatusText->Text = "Iniciando emulador...";
+		startupStatusText->Text = "Starting emulator...";
 		m_main->StartEmulation(configPath);
 		m_main->StartRenderLoop();
 		m_emulationStarted = true;
@@ -928,17 +986,17 @@ void DirectXPage::MonitorStartupAfterDelay()
 			String^ message = m_main->LastEmulationError();
 			HandleStartupFailure(message != nullptr && message->Length() > 0
 				? message
-				: ref new String(L"Falha ao iniciar o emulador."));
+				: ref new String(L"Failed to start the emulator."));
 			return;
 		}
 
 		if (m_main->HasEmulationExited() && !m_main->IsEmulationRunning())
 		{
-			HandleStartupFailure(ref new String(L"O emulador encerrou antes de completar a inicializacao."));
+			HandleStartupFailure(ref new String(L"The emulator exited before startup completed."));
 			return;
 		}
 
-		startupStatusText->Text = "Emulador em execucao.";
+		startupStatusText->Text = "Emulator running.";
 		UpdateCommandState();
 	}, task_continuation_context::use_current());
 }
@@ -947,7 +1005,7 @@ void DirectXPage::HandleStartupFailure(String^ message)
 {
 	String^ finalMessage = message != nullptr && message->Length() > 0
 		? message
-		: ref new String(L"Falha ao iniciar o emulador.");
+		: ref new String(L"Failed to start the emulator.");
 	m_main->StopRenderLoop();
 	m_main->ShutdownEmulation();
 	m_emulationStarted = false;
@@ -1004,7 +1062,7 @@ void DirectXPage::BootDeviceComboBox_SelectionChanged(Object^ sender, SelectionC
 	}
 
 	m_bootTarget = SelectedBootSequence();
-	startupStatusText->Text = "Sequencia de boot selecionada.";
+	startupStatusText->Text = "Boot sequence selected.";
 	UpdateBochsrcPreview();
 }
 
@@ -1032,7 +1090,7 @@ void DirectXPage::PauseButton_Click(Object^ sender, RoutedEventArgs^ e)
 
 	m_main->PauseEmulation();
 	m_emulationPaused = true;
-	startupStatusText->Text = "Emulador pausado.";
+	startupStatusText->Text = "Emulator paused.";
 	UpdateCommandState();
 }
 
@@ -1048,7 +1106,7 @@ void DirectXPage::ResumeButton_Click(Object^ sender, RoutedEventArgs^ e)
 	m_main->ResumeEmulation();
 	m_main->StartRenderLoop();
 	m_emulationPaused = false;
-	startupStatusText->Text = "Emulador em execucao.";
+	startupStatusText->Text = "Emulator running.";
 	UpdateCommandState();
 }
 
@@ -1068,7 +1126,7 @@ void DirectXPage::ShutdownButton_Click(Object^ sender, RoutedEventArgs^ e)
 	configurationPanel->Visibility = m_tabsEnabled
 		? Windows::UI::Xaml::Visibility::Visible
 		: Windows::UI::Xaml::Visibility::Collapsed;
-	startupStatusText->Text = "Emulador desligado.";
+	startupStatusText->Text = "Emulator shut down.";
 	UpdateCommandState();
 }
 
@@ -1092,7 +1150,7 @@ void DirectXPage::SaveButton_Click(Object^ sender, RoutedEventArgs^ e)
 		}
 		catch (...)
 		{
-			HandleAsyncFailure("Nao foi possivel verificar o slot de save-state.");
+			HandleAsyncFailure("Could not check the save-state slot.");
 			return;
 		}
 
@@ -1102,12 +1160,12 @@ void DirectXPage::SaveButton_Click(Object^ sender, RoutedEventArgs^ e)
 			return;
 		}
 
-		std::wstring message(L"O ");
+		std::wstring message(L"The ");
 		message += slotLabel->Data();
-		message += L" ja contem um estado salvo. Deseja sobrescrever?";
-		MessageDialog^ dialog = ref new MessageDialog(ref new String(message.c_str()), "Sobrescrever save-state");
-		UICommand^ overwriteCommand = ref new UICommand("Sobrescrever");
-		UICommand^ cancelCommand = ref new UICommand("Cancelar");
+		message += L" already contains a saved state. Overwrite it?";
+		MessageDialog^ dialog = ref new MessageDialog(ref new String(message.c_str()), "Overwrite save-state");
+		UICommand^ overwriteCommand = ref new UICommand("Overwrite");
+		UICommand^ cancelCommand = ref new UICommand("Cancel");
 		dialog->Commands->Append(overwriteCommand);
 		dialog->Commands->Append(cancelCommand);
 		dialog->DefaultCommandIndex = 0;
@@ -1121,7 +1179,7 @@ void DirectXPage::SaveButton_Click(Object^ sender, RoutedEventArgs^ e)
 			}
 			catch (...)
 			{
-				HandleAsyncFailure("Nao foi possivel abrir a confirmacao de sobrescrita.");
+				HandleAsyncFailure("Could not open the overwrite confirmation.");
 				return;
 			}
 			if (command == overwriteCommand)
@@ -1130,7 +1188,7 @@ void DirectXPage::SaveButton_Click(Object^ sender, RoutedEventArgs^ e)
 			}
 			else
 			{
-				startupStatusText->Text = "Save-state cancelado.";
+				startupStatusText->Text = "Save-state canceled.";
 			}
 		}, task_continuation_context::use_current());
 	}, task_continuation_context::use_current());
@@ -1142,18 +1200,18 @@ void DirectXPage::RestoreButton_Click(Object^ sender, RoutedEventArgs^ e)
 	UNREFERENCED_PARAMETER(e);
 	if (!m_saveStateAvailable)
 	{
-		startupStatusText->Text = "Nenhum estado salvo encontrado.";
-		AppendProblemLog("Restauracao bloqueada: nenhum estado salvo foi encontrado.");
+		startupStatusText->Text = "No saved state found.";
+		AppendProblemLog("Restore blocked: no saved state was found.");
 		return;
 	}
 
 	if (m_emulationStarted)
 	{
 		MessageDialog^ dialog = ref new MessageDialog(
-			"Restaurar um estado salvo vai desligar a sessao atual antes de carregar o slot selecionado.",
-			"Restaurar save-state");
-		UICommand^ restoreCommand = ref new UICommand("Restaurar");
-		UICommand^ cancelCommand = ref new UICommand("Cancelar");
+			"Restoring a saved state will shut down the current session before loading the selected slot.",
+			"Restore save-state");
+		UICommand^ restoreCommand = ref new UICommand("Restore");
+		UICommand^ cancelCommand = ref new UICommand("Cancel");
 		dialog->Commands->Append(restoreCommand);
 		dialog->Commands->Append(cancelCommand);
 		dialog->DefaultCommandIndex = 0;
@@ -1167,7 +1225,7 @@ void DirectXPage::RestoreButton_Click(Object^ sender, RoutedEventArgs^ e)
 			}
 			catch (...)
 			{
-				HandleAsyncFailure("Nao foi possivel abrir a confirmacao de restauracao.");
+				HandleAsyncFailure("Could not open the restore confirmation.");
 				return;
 			}
 			if (command == restoreCommand)
@@ -1195,13 +1253,13 @@ void DirectXPage::ClearProblemsButton_Click(Object^ sender, RoutedEventArgs^ e)
 	m_problemLog.clear();
 	m_problemCount = 0;
 	UpdateProblemLogView();
-	startupStatusText->Text = "Diagnosticos limpos.";
+	startupStatusText->Text = "Diagnostics cleared.";
 }
 
 void DirectXPage::SaveSelectedState()
 {
 	String^ slotLabel = SelectedSaveStateSlotLabel();
-	std::wstring status(L"Salvando estado no ");
+	std::wstring status(L"Saving state to ");
 	status += slotLabel->Data();
 	status += L"...";
 	startupStatusText->Text = ref new String(status.c_str());
@@ -1211,15 +1269,15 @@ void DirectXPage::SaveSelectedState()
 	m_emulationPaused = true;
 	if (saved)
 	{
-		std::wstring done(L"Estado salvo no ");
+		std::wstring done(L"State saved to ");
 		done += slotLabel->Data();
 		done += L".";
 		startupStatusText->Text = ref new String(done.c_str());
 	}
 	else
 	{
-		startupStatusText->Text = "Nao foi possivel salvar o estado agora.";
-		AppendProblemLog("Falha ao salvar estado: o core nao confirmou o checkpoint.");
+		startupStatusText->Text = "Could not save the state right now.";
+		AppendProblemLog("Failed to save state: the core did not confirm the checkpoint.");
 	}
 	UpdateSaveStateSlotStatus();
 	UpdateCommandState();
@@ -1339,14 +1397,14 @@ void DirectXPage::UpdateProblemLogView()
 	if (problemCountText != nullptr)
 	{
 		std::wstring count = std::to_wstring(m_problemCount);
-		count += m_problemCount == 1 ? L" evento" : L" eventos";
+		count += m_problemCount == 1 ? L" event" : L" events";
 		problemCountText->Text = ref new String(count.c_str());
 	}
 	UpdateDiagnosticSummary();
 
 	if (m_problemLog.empty())
 	{
-		SetRichTextBlockText(problemLogRichTextBlock, "Nenhum problema registrado nesta sessao.");
+		SetRichTextBlockText(problemLogRichTextBlock, "No problems recorded in this session.");
 		return;
 	}
 
@@ -1363,19 +1421,20 @@ void DirectXPage::UpdateDiagnosticSummary()
 	bool hasDisk = m_selectedDiskPath != nullptr && m_selectedDiskPath->Length() > 0;
 	bool hasFloppy = m_selectedFloppyPath != nullptr && m_selectedFloppyPath->Length() > 0;
 	bool hasCdrom = m_selectedCdromPath != nullptr && m_selectedCdromPath->Length() > 0;
-	std::wstring summary(L"Estado: ");
+	bool hasSharedFolder = m_selectedSharedFolderPath != nullptr && m_selectedSharedFolderPath->Length() > 0;
+	std::wstring summary(L"State: ");
 	if (m_emulationStarted)
 	{
-		summary += m_emulationPaused ? L"pausado" : L"em execucao";
+		summary += m_emulationPaused ? L"paused" : L"running";
 	}
 	else
 	{
-		summary += L"pronto";
+		summary += L"ready";
 	}
 	summary += L"\nBoot: ";
 	summary += SelectedBootSequence()->Data();
-	summary += L"\nMidias: HDD ";
-	summary += hasDisk ? L"selecionado" : L"vazio";
+	summary += L"\nMedia: HDD ";
+	summary += hasDisk ? L"selected" : L"empty";
 	if (hasDisk)
 	{
 		summary += L" (";
@@ -1383,17 +1442,19 @@ void DirectXPage::UpdateDiagnosticSummary()
 		summary += L")";
 	}
 	summary += L", Floppy ";
-	summary += hasFloppy ? L"selecionado" : L"vazio";
+	summary += hasFloppy ? L"selected" : L"empty";
 	summary += L", ISO ";
-	summary += hasCdrom ? L"selecionada" : L"vazia";
+	summary += hasCdrom ? L"selected" : L"empty";
+	summary += L", Shared folder ";
+	summary += hasSharedFolder ? L"selected" : L"empty";
 	summary += L"\nSave-state: ";
 	summary += SelectedSaveStateSlotLabel()->Data();
-	summary += m_saveStateAvailable ? L" com estado salvo" : L" vazio";
-	summary += L"\nRecursos: som ";
-	summary += SelectedSoundEnabled() ? L"ligado" : L"desligado";
-	summary += L", rede ";
-	summary += SelectedNetworkEnabled() ? L"ligada" : L"desligada";
-	summary += L"\nMemoria: guest ";
+	summary += m_saveStateAvailable ? L" with saved state" : L" empty";
+	summary += L"\nFeatures: sound ";
+	summary += SelectedSoundEnabled() ? L"on" : L"off";
+	summary += L", network ";
+	summary += SelectedNetworkEnabled() ? L"on" : L"off";
+	summary += L"\nMemory: guest ";
 	summary += std::to_wstring(SelectedMemoryMb());
 	summary += L" MB, host ";
 	summary += std::to_wstring(BochsUwpStorage::EffectiveHostMemoryMb(SelectedMemoryMb()));
@@ -1418,6 +1479,7 @@ void DirectXPage::UpdateBochsrcPreview()
 		m_selectedDiskPath,
 		m_selectedFloppyPath,
 		m_selectedCdromPath,
+		m_selectedSharedFolderPath,
 		m_bootTarget,
 		SelectedMemoryMb(),
 		SelectedCpuModel(),
@@ -1436,7 +1498,7 @@ void DirectXPage::UpdateDiskImageModeLabel()
 		return;
 	}
 
-	std::wstring text(L"Modo efetivo: ");
+	std::wstring text(L"Effective mode: ");
 	text += EffectiveDiskImageMode()->Data();
 	if (m_selectedDiskPath != nullptr && m_selectedDiskPath->Length() > 0)
 	{
@@ -1638,15 +1700,18 @@ void DirectXPage::UpdateCommandState()
 	bool hasDisk = m_selectedDiskPath != nullptr && m_selectedDiskPath->Length() > 0;
 	bool hasFloppy = m_selectedFloppyPath != nullptr && m_selectedFloppyPath->Length() > 0;
 	bool hasCdrom = m_selectedCdromPath != nullptr && m_selectedCdromPath->Length() > 0;
+	bool hasSharedFolder = m_selectedSharedFolderPath != nullptr && m_selectedSharedFolderPath->Length() > 0;
 	toggleTabsButton->Label = m_tabsEnabled
-		? ref new String(L"Ocultar abas")
-		: ref new String(L"Mostrar abas");
+		? ref new String(L"Hide tabs")
+		: ref new String(L"Show tabs");
 	chooseDiskButton->IsEnabled = !m_emulationStarted;
 	resetDiskButton->IsEnabled = !m_emulationStarted && hasDisk;
 	chooseFloppyButton->IsEnabled = !m_emulationStarted;
 	resetFloppyButton->IsEnabled = !m_emulationStarted && hasFloppy;
 	chooseCdromButton->IsEnabled = !m_emulationStarted;
 	resetCdromButton->IsEnabled = !m_emulationStarted && hasCdrom;
+	chooseSharedFolderButton->IsEnabled = !m_emulationStarted;
+	resetSharedFolderButton->IsEnabled = !m_emulationStarted && hasSharedFolder;
 	resetBiosButton->IsEnabled = !m_emulationStarted;
 	selectBiosButton->IsEnabled = !m_emulationStarted;
 	resetVgaBiosButton->IsEnabled = !m_emulationStarted;
@@ -1917,14 +1982,14 @@ void DirectXPage::ToggleMouseCaptureFromShortcut()
 		m_mouseCapturePending = false;
 		m_main->RequestMouseCapture(false);
 		ReleaseMouseCapture();
-		startupStatusText->Text = "Captura do mouse pausada. Pressione Ctrl+Alt+M para continuar.";
+		startupStatusText->Text = "Mouse capture paused. Press Ctrl+Alt+M to continue.";
 		return;
 	}
 
 	if (BochsUwpBridge::IsMouseAbsolute())
 	{
 		m_mouseCaptureUserReleased = false;
-		startupStatusText->Text = "Mouse absoluto ativo; captura relativa nao e necessaria.";
+		startupStatusText->Text = "Absolute mouse is active; relative capture is not needed.";
 		return;
 	}
 
@@ -1932,7 +1997,7 @@ void DirectXPage::ToggleMouseCaptureFromShortcut()
 	m_mouseCapturePending = true;
 	m_main->RequestMouseCapture(true);
 	UpdateMouseCaptureFromCore();
-	startupStatusText->Text = "Captura do mouse solicitada. Pressione Ctrl+Alt+M para pausar.";
+	startupStatusText->Text = "Mouse capture requested. Press Ctrl+Alt+M to pause.";
 }
 
 void DirectXPage::UpdateMouseCaptureFromCore()

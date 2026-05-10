@@ -71,7 +71,7 @@ namespace
 		std::wstring log = RecentCoreLog();
 		if (!log.empty())
 		{
-			message += L"\n\nLog recente do Bochs:\n";
+			message += L"\n\nRecent Bochs log:\n";
 			message += log;
 		}
 	}
@@ -124,7 +124,7 @@ void BochsRuntime::Start(Platform::String^ configPath, Platform::String^ restore
 	}
 	catch (const std::exception& ex)
 	{
-		std::wstring message(L"Falha ao criar a thread do emulador: ");
+		std::wstring message(L"Failed to create the emulator thread: ");
 		int length = MultiByteToWideChar(CP_UTF8, 0, ex.what(), -1, nullptr, 0);
 		if (length > 1)
 		{
@@ -139,7 +139,7 @@ void BochsRuntime::Start(Platform::String^ configPath, Platform::String^ restore
 	}
 	catch (...)
 	{
-		SetLastError(L"Falha desconhecida ao criar a thread do emulador.");
+		SetLastError(L"Unknown failure while creating the emulator thread.");
 		m_started = false;
 		m_exited = true;
 		m_running = false;
@@ -271,7 +271,7 @@ void BochsRuntime::Run()
 			int result = bochs_core_uwp_run_with_restore(configPathUtf8.c_str(), restorePathUtf8.c_str());
 			if (!m_shutdownRequested.load() && result != 0)
 			{
-				std::wstring message(L"bochs_core_uwp_run_with_restore falhou com codigo ");
+				std::wstring message(L"bochs_core_uwp_run_with_restore failed with code ");
 				message += std::to_wstring(result);
 				message += L".";
 				AppendRecentCoreLog(message);
@@ -281,7 +281,7 @@ void BochsRuntime::Run()
 	}
 	catch (Platform::Exception^ ex)
 	{
-		std::wstring message(L"Falha ao iniciar o core Bochs");
+		std::wstring message(L"Failed to start the Bochs core");
 		if (ex != nullptr && ex->Message != nullptr && ex->Message->Length() > 0)
 		{
 			message += L": ";
@@ -293,7 +293,7 @@ void BochsRuntime::Run()
 	}
 	catch (const std::exception& ex)
 	{
-		std::wstring message(L"Falha ao iniciar o core Bochs: ");
+		std::wstring message(L"Failed to start the Bochs core: ");
 		int length = MultiByteToWideChar(CP_UTF8, 0, ex.what(), -1, nullptr, 0);
 		if (length > 1)
 		{
@@ -303,7 +303,7 @@ void BochsRuntime::Run()
 		}
 		else
 		{
-			message += L"std::exception sem detalhes";
+			message += L"std::exception without details";
 		}
 		message += L".";
 		AppendRecentCoreLog(message);
@@ -311,7 +311,7 @@ void BochsRuntime::Run()
 	}
 	catch (...)
 	{
-		std::wstring message(L"Falha desconhecida ao iniciar o core Bochs.");
+		std::wstring message(L"Unknown failure while starting the Bochs core.");
 		AppendRecentCoreLog(message);
 		SetLastError(message);
 	}

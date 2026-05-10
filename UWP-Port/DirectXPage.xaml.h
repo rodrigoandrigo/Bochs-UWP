@@ -50,6 +50,8 @@ namespace UWP_Port
 		void ResetFloppyButton_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void ChooseCdromButton_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void ResetCdromButton_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
+		void ChooseSharedFolderButton_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
+		void ResetSharedFolderButton_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void SelectBiosButton_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void ResetBiosButton_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void SelectVgaBiosButton_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
@@ -136,6 +138,7 @@ namespace UWP_Port
 		Platform::String^ m_selectedDiskPath;
 		Platform::String^ m_selectedFloppyPath;
 		Platform::String^ m_selectedCdromPath;
+		Platform::String^ m_selectedSharedFolderPath;
 		Platform::String^ m_bootTarget;
 		Platform::String^ m_selectedBiosPath;
 		Platform::String^ m_selectedVgaBiosPath;

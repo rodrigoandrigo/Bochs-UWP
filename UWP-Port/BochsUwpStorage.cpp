@@ -156,6 +156,37 @@ namespace
 			EndsWithIgnoreCase(value, L".raw");
 	}
 
+	static bool CanEnumerateFolderWithWin32Apis(String^ folderPath)
+	{
+		if (folderPath == nullptr || folderPath->Length() == 0)
+		{
+			return false;
+		}
+
+		std::wstring filter(folderPath->Data());
+		if (!filter.empty() && filter.back() != L'\\' && filter.back() != L'/')
+		{
+			filter += L"\\";
+		}
+		filter += L"*";
+
+		WIN32_FIND_DATAW findData;
+		HANDLE findHandle = FindFirstFileExW(
+			filter.c_str(),
+			FindExInfoBasic,
+			&findData,
+			FindExSearchNameMatch,
+			nullptr,
+			0);
+		if (findHandle == INVALID_HANDLE_VALUE)
+		{
+			return false;
+		}
+
+		FindClose(findHandle);
+		return true;
+	}
+
 	static String^ BuildUwpDiskUri(String^ token, String^ name)
 	{
 		std::wstring uri = L"uwp://";
@@ -327,6 +358,7 @@ namespace
 		String^ diskPath,
 		String^ floppyPath,
 		String^ cdromPath,
+		String^ sharedFolderPath,
 		String^ bootTarget,
 		int memoryMb,
 		String^ cpuModel,
@@ -421,6 +453,7 @@ namespace
 		bool hasDisk = diskPath != nullptr && diskPath->Length() > 0;
 		bool hasFloppy = floppyPath != nullptr && floppyPath->Length() > 0;
 		bool hasCdrom = cdromPath != nullptr && cdromPath->Length() > 0;
+		bool hasSharedFolder = sharedFolderPath != nullptr && sharedFolderPath->Length() > 0;
 		std::wstring bootOrder = BuildBootOrder(boot, hasDisk, hasFloppy, hasCdrom);
 
 		if (hasFloppy)
@@ -457,6 +490,19 @@ namespace
 				: L"ata0-master: type=cdrom, path=\"";
 			config += cdromPath->Data();
 			config += L"\", status=inserted\n";
+		}
+
+		if (hasSharedFolder)
+		{
+			std::wstring vvfatJournal(ApplicationData::Current->LocalFolder->Path->Data());
+			vvfatJournal += L"\\vvfat-readonly-redolog";
+			config += L"ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15\n";
+			config += L"ata1-master: type=disk, path=\"";
+			config += L"readonly:";
+			config += sharedFolderPath->Data();
+			config += L"\", mode=vvfat, journal=\"";
+			config += vvfatJournal;
+			config += L"\", translation=lba\n";
 		}
 
 		config += L"boot: ";
@@ -496,6 +542,7 @@ task<String^> UWP_Port::BochsUwpStorage::CreateConfigAsync(
 		diskPath,
 		floppyPath,
 		cdromPath,
+		nullptr,
 		bootTarget,
 		memoryMb,
 		cpuModel,
@@ -522,6 +569,7 @@ task<String^> UWP_Port::BochsUwpStorage::CreateConfigAsync(
 		diskPath,
 		floppyPath,
 		cdromPath,
+		nullptr,
 		bootTarget,
 		memoryMb,
 		cpuModel,
@@ -545,11 +593,41 @@ task<String^> UWP_Port::BochsUwpStorage::CreateConfigAsync(
 	bool networkEnabled,
 	String^ diskImageMode)
 {
+	return CreateConfigAsync(
+		diskPath,
+		floppyPath,
+		cdromPath,
+		nullptr,
+		bootTarget,
+		memoryMb,
+		cpuModel,
+		biosPath,
+		vgaBiosPath,
+		soundEnabled,
+		networkEnabled,
+		diskImageMode);
+}
+
+task<String^> UWP_Port::BochsUwpStorage::CreateConfigAsync(
+	String^ diskPath,
+	String^ floppyPath,
+	String^ cdromPath,
+	String^ sharedFolderPath,
+	String^ bootTarget,
+	int memoryMb,
+	String^ cpuModel,
+	String^ biosPath,
+	String^ vgaBiosPath,
+	bool soundEnabled,
+	bool networkEnabled,
+	String^ diskImageMode)
+{
 	StorageFolder^ localFolder = ApplicationData::Current->LocalFolder;
 	String^ configText = CreateConfigText(
 		diskPath,
 		floppyPath,
 		cdromPath,
+		sharedFolderPath,
 		bootTarget,
 		memoryMb,
 		cpuModel,
@@ -588,6 +666,7 @@ String^ UWP_Port::BochsUwpStorage::CreateConfigText(
 		diskPath,
 		floppyPath,
 		cdromPath,
+		nullptr,
 		bootTarget,
 		memoryMb,
 		cpuModel,
@@ -611,10 +690,40 @@ String^ UWP_Port::BochsUwpStorage::CreateConfigText(
 	bool networkEnabled,
 	String^ diskImageMode)
 {
+	return CreateConfigText(
+		diskPath,
+		floppyPath,
+		cdromPath,
+		nullptr,
+		bootTarget,
+		memoryMb,
+		cpuModel,
+		biosPath,
+		vgaBiosPath,
+		soundEnabled,
+		networkEnabled,
+		diskImageMode);
+}
+
+String^ UWP_Port::BochsUwpStorage::CreateConfigText(
+	String^ diskPath,
+	String^ floppyPath,
+	String^ cdromPath,
+	String^ sharedFolderPath,
+	String^ bootTarget,
+	int memoryMb,
+	String^ cpuModel,
+	String^ biosPath,
+	String^ vgaBiosPath,
+	bool soundEnabled,
+	bool networkEnabled,
+	String^ diskImageMode)
+{
 	return DefaultBochsrcText(
 		diskPath,
 		floppyPath,
 		cdromPath,
+		sharedFolderPath,
 		bootTarget,
 		memoryMb,
 		cpuModel,
@@ -744,6 +853,45 @@ task<String^> UWP_Port::BochsUwpStorage::PickBiosImageToLocalFolderAsync()
 		}
 
 		return CopyPickedFileToLocalFolderAsync(pickedFile);
+	});
+}
+
+task<String^> UWP_Port::BochsUwpStorage::PickSharedFolderAsync()
+{
+	FolderPicker^ picker = ref new FolderPicker();
+	picker->ViewMode = PickerViewMode::List;
+	picker->SuggestedStartLocation = PickerLocationId::ComputerFolder;
+	picker->FileTypeFilter->Append(ref new String(L"*"));
+
+	return create_task(picker->PickSingleFolderAsync()).then([](StorageFolder^ pickedFolder)
+	{
+		if (pickedFolder == nullptr)
+		{
+			return task_from_result<String^>(nullptr);
+		}
+
+		if (pickedFolder->Path == nullptr || pickedFolder->Path->Length() == 0)
+		{
+			return task_from_result<String^>(nullptr);
+		}
+
+		if (!CanEnumerateFolderWithWin32Apis(pickedFolder->Path))
+		{
+			throw ref new FailureException(
+				ref new String(L"A pasta foi selected, mas o core do Bochs nao conseguiu acessa-la pelo caminho real. Habilite o acesso a arquivos para o app nas configuracoes de privacidade do Windows e tente novamente."));
+		}
+
+		try
+		{
+			StorageApplicationPermissions::FutureAccessList->AddOrReplace(
+				ref new String(L"BochsSharedFolder"),
+				pickedFolder);
+		}
+		catch (...)
+		{
+		}
+
+		return task_from_result(pickedFolder->Path);
 	});
 }
 

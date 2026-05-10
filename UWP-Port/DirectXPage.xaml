@@ -32,43 +32,43 @@
         <AppBarButton
             x:Name="toggleTabsButton"
             Icon="Setting"
-            Label="Mostrar abas"
+            Label="Show tabs"
             Click="ToggleTabsButton_Click"
             Foreground="White" />
         <AppBarButton
             x:Name="startEmulatorButton"
             Icon="Play"
-            Label="Iniciar"
+            Label="Start"
             Click="StartEmulatorButton_Click"
             Foreground="White" />
         <AppBarButton
             x:Name="pauseButton"
             Icon="Pause"
-            Label="Pausar"
+            Label="Pause"
             Click="PauseButton_Click"
             Foreground="White" />
         <AppBarButton
             x:Name="resumeButton"
             Icon="Play"
-            Label="Retomar"
+            Label="Resume"
             Click="ResumeButton_Click"
             Foreground="White" />
         <AppBarButton
             x:Name="shutdownButton"
             Icon="Stop"
-            Label="Desligar"
+            Label="Shutdown"
             Click="ShutdownButton_Click"
             Foreground="White" />
         <AppBarButton
             x:Name="saveButton"
             Icon="Save"
-            Label="Salvar"
+            Label="Save"
             Click="SaveButton_Click"
             Foreground="White" />
         <AppBarButton
             x:Name="restoreButton"
             Icon="Refresh"
-            Label="Restaurar"
+            Label="Restore"
             Click="RestoreButton_Click"
             Foreground="White" />
       </CommandBar.PrimaryCommands>
@@ -88,7 +88,7 @@
             FontWeight="SemiBold"
             HorizontalAlignment="Center" />
         <TextBlock
-            Text="Pressione Iniciar para comecar."
+            Text="Press Start to begin."
             Foreground="White"
             FontSize="13"
             HorizontalAlignment="Center" />
@@ -128,7 +128,7 @@
           <AppBarButton
               x:Name="settingsTabButton"
               Icon="Setting"
-              Label="Configuracoes"
+              Label="Settings"
               Click="SettingsTabButton_Click"
               Foreground="{StaticResource MutedTextBrush}"
               IsCompact="True" />
@@ -142,14 +142,14 @@
           <AppBarButton
               x:Name="problemsTabButton"
               Icon="Comment"
-              Label="Problemas"
+              Label="Problems"
               Click="ProblemsTabButton_Click"
               Foreground="{StaticResource MutedTextBrush}"
               IsCompact="True" />
           <AppBarButton
               x:Name="aboutTabButton"
               Icon="Help"
-              Label="Sobre"
+              Label="About"
               Click="AboutTabButton_Click"
               Foreground="{StaticResource MutedTextBrush}"
               IsCompact="True" />
@@ -157,7 +157,7 @@
         <TextBlock
             Grid.Column="1"
             x:Name="startupStatusText"
-            Text="Selecione uma imagem de boot ou restaure um estado salvo."
+            Text="Select boot media or restore a saved state."
             Foreground="{StaticResource MutedTextBrush}"
             FontSize="12"
             TextTrimming="CharacterEllipsis"
@@ -180,14 +180,14 @@
           <StackPanel Spacing="4">
             <TextBlock Text="Boot" Foreground="White" FontSize="20" FontWeight="SemiBold" />
             <TextBlock
-                Text="Escolha as midias e a ordem de inicializacao antes de iniciar."
+                Text="Choose media and boot order before starting."
                 Foreground="{StaticResource MutedTextBrush}"
                 TextWrapping="WrapWholeWords" />
           </StackPanel>
 
           <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
             <StackPanel Spacing="8">
-              <TextBlock Text="ORDEM DE BOOT" Foreground="White" FontWeight="SemiBold" />
+              <TextBlock Text="BOOT ORDER" Foreground="White" FontWeight="SemiBold" />
               <StackPanel Orientation="Horizontal" Spacing="10">
                 <StackPanel Spacing="4" Width="128">
                   <TextBlock Text="1" Foreground="{StaticResource MutedTextBrush}" />
@@ -211,7 +211,7 @@
                     <ComboBoxItem Content="HDD" Tag="disk" />
                     <ComboBoxItem Content="ISO" Tag="cdrom" />
                     <ComboBoxItem Content="Floppy" Tag="floppy" />
-                    <ComboBoxItem Content="Nenhum" Tag="none" />
+                    <ComboBoxItem Content="None" Tag="none" />
                   </ComboBox>
                 </StackPanel>
                 <StackPanel Spacing="4" Width="128">
@@ -224,14 +224,14 @@
                     <ComboBoxItem Content="HDD" Tag="disk" />
                     <ComboBoxItem Content="ISO" Tag="cdrom" />
                     <ComboBoxItem Content="Floppy" Tag="floppy" />
-                    <ComboBoxItem Content="Nenhum" Tag="none" />
+                    <ComboBoxItem Content="None" Tag="none" />
                   </ComboBox>
                 </StackPanel>
               </StackPanel>
             </StackPanel>
           </Border>
 
-          <TextBlock Text="MIDIAS" Foreground="White" FontWeight="SemiBold" />
+          <TextBlock Text="MEDIA" Foreground="White" FontWeight="SemiBold" />
           <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
             <Grid>
               <Grid.ColumnDefinitions>
@@ -241,22 +241,22 @@
               </Grid.ColumnDefinitions>
               <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                 <TextBlock Text="HDD" Foreground="White" FontWeight="SemiBold" />
-                <TextBlock Text="Disco instalavel" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+                <TextBlock Text="Installable disk" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="8" Margin="10,0,10,0" VerticalAlignment="Center">
                 <TextBlock
                     x:Name="diskPathText"
-                    Text="Nenhuma imagem selecionada"
+                    Text="No image selected"
                     Foreground="{StaticResource MutedTextBrush}"
                     TextWrapping="WrapWholeWords" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <TextBlock Text="Modo" Foreground="White" VerticalAlignment="Center" />
+                  <TextBlock Text="Mode" Foreground="White" VerticalAlignment="Center" />
                   <ComboBox
                       x:Name="diskImageModeComboBox"
                       SelectedIndex="0"
                       SelectionChanged="DiskImageModeComboBox_SelectionChanged"
                       Width="220">
-                    <ComboBoxItem Content="Automatico" Tag="auto" />
+                    <ComboBoxItem Content="Automatic" Tag="auto" />
                     <ComboBoxItem Content="Raw / flat" Tag="flat" />
                     <ComboBoxItem Content="VHD / VirtualPC" Tag="vpc" />
                     <ComboBoxItem Content="VDI / VirtualBox" Tag="vbox" />
@@ -269,7 +269,7 @@
                   </ComboBox>
                   <TextBlock
                       x:Name="diskImageModeText"
-                      Text="Modo efetivo: flat"
+                      Text="Effective mode: flat"
                       Foreground="{StaticResource MutedTextBrush}"
                       VerticalAlignment="Center"
                       TextWrapping="WrapWholeWords" />
@@ -279,13 +279,13 @@
                 <AppBarButton
                     x:Name="resetDiskButton"
                     Icon="Delete"
-                    Label="Remover"
+                    Label="Remove"
                     Click="ResetDiskButton_Click"
                     Foreground="White" />
                 <AppBarButton
                     x:Name="chooseDiskButton"
                     Icon="OpenFile"
-                    Label="Selecionar HDD"
+                    Label="Select HDD"
                     Click="ChooseDiskButton_Click"
                     Foreground="White" />
               </StackPanel>
@@ -301,12 +301,12 @@
               </Grid.ColumnDefinitions>
               <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                 <TextBlock Text="ISO / CD-ROM" Foreground="White" FontWeight="SemiBold" />
-                <TextBlock Text="Live-CD ou instalador" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+                <TextBlock Text="Live CD or installer" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
               </StackPanel>
               <TextBlock
                   Grid.Column="1"
                   x:Name="cdromPathText"
-                  Text="Nenhuma ISO selecionada"
+                  Text="No ISO selected"
                   Foreground="{StaticResource MutedTextBrush}"
                   TextWrapping="WrapWholeWords"
                   Margin="10,0,10,0"
@@ -315,13 +315,13 @@
                 <AppBarButton
                     x:Name="resetCdromButton"
                     Icon="Delete"
-                    Label="Remover"
+                    Label="Remove"
                     Click="ResetCdromButton_Click"
                     Foreground="White" />
                 <AppBarButton
                     x:Name="chooseCdromButton"
                     Icon="OpenFile"
-                    Label="Selecionar ISO"
+                    Label="Select ISO"
                     Click="ChooseCdromButton_Click"
                     Foreground="White" />
               </StackPanel>
@@ -337,12 +337,12 @@
               </Grid.ColumnDefinitions>
               <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                 <TextBlock Text="Floppy" Foreground="White" FontWeight="SemiBold" />
-                <TextBlock Text="Imagem de disquete" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+                <TextBlock Text="Floppy image" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
               </StackPanel>
               <TextBlock
                   Grid.Column="1"
                   x:Name="floppyPathText"
-                  Text="Nenhum floppy selecionado"
+                  Text="No floppy selected"
                   Foreground="{StaticResource MutedTextBrush}"
                   TextWrapping="WrapWholeWords"
                   Margin="10,0,10,0"
@@ -351,14 +351,50 @@
                 <AppBarButton
                     x:Name="resetFloppyButton"
                     Icon="Delete"
-                    Label="Remover"
+                    Label="Remove"
                     Click="ResetFloppyButton_Click"
                     Foreground="White" />
                 <AppBarButton
                     x:Name="chooseFloppyButton"
                     Icon="OpenFile"
-                    Label="Selecionar floppy"
+                    Label="Select floppy"
                     Click="ChooseFloppyButton_Click"
+                    Foreground="White" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="Shared folder" Foreground="White" FontWeight="SemiBold" />
+                <TextBlock Text="Live read-only VVFAT" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+              </StackPanel>
+              <TextBlock
+                  Grid.Column="1"
+                  x:Name="sharedFolderPathText"
+                  Text="No folder selected"
+                  Foreground="{StaticResource MutedTextBrush}"
+                  TextWrapping="WrapWholeWords"
+                  Margin="10,0,10,0"
+                  VerticalAlignment="Center" />
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <AppBarButton
+                    x:Name="resetSharedFolderButton"
+                    Icon="Delete"
+                    Label="Remove"
+                    Click="ResetSharedFolderButton_Click"
+                    Foreground="White" />
+                <AppBarButton
+                    x:Name="chooseSharedFolderButton"
+                    Icon="Folder"
+                    Label="Select folder"
+                    Click="ChooseSharedFolderButton_Click"
                     Foreground="White" />
               </StackPanel>
             </Grid>
@@ -376,7 +412,7 @@
               <TextBlock
                   Grid.Column="1"
                   x:Name="biosPathText"
-                  Text="BIOS-bochs-latest embutida"
+                  Text="Built-in BIOS-bochs-latest"
                   Foreground="{StaticResource MutedTextBrush}"
                   TextWrapping="WrapWholeWords"
                   Margin="10,0,10,0"
@@ -385,13 +421,13 @@
                 <AppBarButton
                     x:Name="resetBiosButton"
                     Icon="Refresh"
-                    Label="Usar embutida"
+                    Label="Use built-in"
                     Click="ResetBiosButton_Click"
                     Foreground="White" />
                 <AppBarButton
                     x:Name="selectBiosButton"
                     Icon="OpenFile"
-                    Label="Selecionar BIOS"
+                    Label="Select BIOS"
                     Click="SelectBiosButton_Click"
                     Foreground="White" />
               </StackPanel>
@@ -409,7 +445,7 @@
               <TextBlock
                   Grid.Column="1"
                   x:Name="vgaBiosPathText"
-                  Text="VGABIOS-lgpl-latest.bin embutida"
+                  Text="Built-in VGABIOS-lgpl-latest.bin"
                   Foreground="{StaticResource MutedTextBrush}"
                   TextWrapping="WrapWholeWords"
                   Margin="10,0,10,0"
@@ -418,13 +454,13 @@
                 <AppBarButton
                     x:Name="resetVgaBiosButton"
                     Icon="Refresh"
-                    Label="Usar embutida"
+                    Label="Use built-in"
                     Click="ResetVgaBiosButton_Click"
                     Foreground="White" />
                 <AppBarButton
                     x:Name="selectVgaBiosButton"
                     Icon="OpenFile"
-                    Label="Selecionar VGA BIOS"
+                    Label="Select VGA BIOS"
                     Click="SelectVgaBiosButton_Click"
                     Foreground="White" />
               </StackPanel>
@@ -438,14 +474,14 @@
             Spacing="14"
             Visibility="Collapsed">
           <StackPanel Spacing="4">
-            <TextBlock Text="Configuracoes" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="Settings" Foreground="White" FontSize="20" FontWeight="SemiBold" />
             <TextBlock
-                Text="Ajustes de maquina, recursos e save-state."
+                Text="Machine, feature and save-state settings."
                 Foreground="{StaticResource MutedTextBrush}"
                 TextWrapping="WrapWholeWords" />
           </StackPanel>
 
-          <TextBlock Text="MAQUINA" Foreground="White" FontWeight="SemiBold" />
+          <TextBlock Text="MACHINE" Foreground="White" FontWeight="SemiBold" />
           <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
             <Grid>
               <Grid.ColumnDefinitions>
@@ -454,7 +490,7 @@
                 <ColumnDefinition Width="110" />
               </Grid.ColumnDefinitions>
               <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                <TextBlock Text="Memoria" Foreground="White" FontWeight="SemiBold" />
+                <TextBlock Text="Memory" Foreground="White" FontWeight="SemiBold" />
                 <TextBlock Text="Guest RAM" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
               </StackPanel>
               <Slider
@@ -536,7 +572,7 @@
             </Grid>
           </Border>
 
-          <TextBlock Text="RECURSOS" Foreground="White" FontWeight="SemiBold" />
+          <TextBlock Text="FEATURES" Foreground="White" FontWeight="SemiBold" />
           <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
             <Grid>
               <Grid.RowDefinitions>
@@ -558,7 +594,7 @@
                   OffContent="Off"
                   Foreground="White"
                   Margin="10,0,0,8" />
-              <TextBlock Grid.Row="1" Grid.Column="0" Text="Rede" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Network" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
               <ToggleSwitch
                   Grid.Row="1"
                   Grid.Column="1"
@@ -595,7 +631,7 @@
               <TextBlock
                   Grid.Column="2"
                   x:Name="saveStateSlotStatusText"
-                  Text="Verificando slot..."
+                  Text="Checking slot..."
                   Foreground="{StaticResource MutedTextBrush}"
                   VerticalAlignment="Center"
                   TextWrapping="WrapWholeWords"
@@ -623,7 +659,7 @@
                 IsTextSelectionEnabled="True"
                 TextWrapping="Wrap">
               <Paragraph>
-                <Run Text="A configuracao gerada aparecera aqui antes de iniciar." />
+                <Run Text="The generated configuration will appear here before start." />
               </Paragraph>
             </RichTextBlock>
           </Border>
@@ -636,30 +672,30 @@
             Visibility="Collapsed">
           <StackPanel Orientation="Horizontal" Spacing="12">
             <StackPanel Spacing="4">
-              <TextBlock Text="Problemas" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="Problems" Foreground="White" FontSize="20" FontWeight="SemiBold" />
               <TextBlock
-                  Text="Diagnostico da sessao atual."
+                  Text="Diagnostics for the current session."
                   Foreground="{StaticResource MutedTextBrush}"
                   TextWrapping="WrapWholeWords" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
               <TextBlock
                   x:Name="problemCountText"
-                  Text="0 eventos"
+                  Text="0 events"
                   Foreground="White"
                   FontWeight="SemiBold"
                   VerticalAlignment="Center" />
               <AppBarButton
                   x:Name="clearProblemsButton"
                   Icon="Delete"
-                  Label="Limpar"
+                  Label="Clear"
                   Click="ClearProblemsButton_Click"
                   Foreground="White"
                   IsCompact="True" />
             </StackPanel>
           </StackPanel>
 
-          <TextBlock Text="RESUMO" Foreground="White" FontWeight="SemiBold" />
+          <TextBlock Text="SUMMARY" Foreground="White" FontWeight="SemiBold" />
           <Border
               BorderBrush="{StaticResource SectionLineBrush}"
               BorderThickness="1"
@@ -669,7 +705,7 @@
                 x:Name="diagnosticSummaryText"
                 Foreground="{StaticResource MutedTextBrush}"
                 TextWrapping="WrapWholeWords"
-                Text="Diagnostico ainda nao calculado." />
+                Text="Diagnostics have not been calculated yet." />
           </Border>
 
           <TextBlock Text="LOG" Foreground="White" FontWeight="SemiBold" />
@@ -686,7 +722,7 @@
                 IsTextSelectionEnabled="True"
                 TextWrapping="Wrap">
               <Paragraph>
-                <Run Text="Nenhum problema registrado nesta sessao." />
+                <Run Text="No problems recorded in this session." />
               </Paragraph>
             </RichTextBlock>
           </Border>
@@ -698,9 +734,9 @@
             Spacing="14"
             Visibility="Collapsed">
           <StackPanel Spacing="4">
-            <TextBlock Text="Sobre" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="About" Foreground="White" FontSize="20" FontWeight="SemiBold" />
             <TextBlock
-                Text="Resumo do app"
+                Text="App summary"
                 Foreground="{StaticResource MutedTextBrush}" />
           </StackPanel>
           <Border
@@ -710,7 +746,7 @@
               MaxWidth="960"
               HorizontalAlignment="Left">
             <TextBlock
-              Text="UWP-Port e uma versao UWP do Bochs que integra o core do emulador a uma interface DirectX. O app prepara a configuracao de boot, monta imagens de HDD, floppy e ISO, oferece ajustes de maquina, save-state por slots, diagnosticos, audio nativo, rede slirp e entrada de teclado/mouse em uma experiencia unica para Windows."
+              Text="UWP-Port is a UWP version of Bochs that integrates the emulator core with a DirectX interface. The app prepares boot configuration, mounts HDD, floppy, ISO and live read-only VVFAT shared folders, exposes machine settings, save-state slots, diagnostics, native audio, slirp networking and keyboard/mouse input in one Windows experience."
               Foreground="{StaticResource MutedTextBrush}"
               TextWrapping="WrapWholeWords" />
           </Border>

@@ -182,6 +182,7 @@ class vvfat_image_t : public device_image_t
 
     bool    use_mbr_file;
     bool    use_boot_file;
+    bool    read_only;
     FILE    *vvfat_attr_fd;
 
     bool      vvfat_modified;

@@ -119,6 +119,8 @@ O gerador atual inclui:
 - `floppya` quando uma imagem de floppy e selecionada
 - `ata0` e `ata0-master` para HDD, com `mode=` inferido ou selecionado na UI
 - `ata0-slave` para ISO/CD-ROM
+- `ata1` e `ata1-master` para uma pasta viva opcional do host montada como
+  VVFAT somente leitura
 - `boot` com ate tres dispositivos ordenados
 - `log: -`
 
@@ -162,6 +164,24 @@ Arquivos e modos de imagem:
   padroes continuam sendo rejeitados como imagem de floppy desconhecida.
 - Se o registro brokered falhar, o picker ainda cai para copia em `LocalFolder`
   para manter compatibilidade.
+
+Pasta compartilhada viva:
+
+- A aba Boot pode montar uma pasta do host como disco VVFAT vivo somente
+  leitura.
+- A entrada gerada usa `path="readonly:<pasta-do-host>"`, `mode=vvfat` e um
+  `journal=` dentro de `ApplicationData::Current->LocalFolder`, evitando que o
+  Bochs crie arquivos temporarios do VVFAT dentro da pasta do host.
+- O backend VVFAT reconhece o prefixo `readonly:`, marca a imagem como
+  `HDIMAGE_READONLY` e rejeita escritas do guest antes que elas cheguem ao
+  diretorio do host.
+- A selecao da pasta registra o item no `FutureAccessList` e tambem verifica se
+  o core Bochs consegue enumerar o caminho real usando APIs Win32 antes de
+  aceitar a configuracao.
+- Como isso usa um caminho real do host, e nao um snapshot, o Windows pode
+  exigir que o acesso ao sistema de arquivos esteja habilitado para o app nas
+  configuracoes de privacidade. O manifesto declara a capability restrita
+  `broadFileSystemAccess` para esse acesso por caminho.
 
 ## Boot
 
@@ -274,6 +294,13 @@ boot order, save-state atual, som e rede.
   `IRandomAccessStream`. Formatos que dependem de multiplos arquivos auxiliares,
   como alguns layouts VMDK, ainda podem exigir copia para `LocalFolder` ou que
   os arquivos relacionados estejam acessiveis juntos pelo formato original.
+- Pastas VVFAT vivas dependem da permissao de sistema de arquivos do Windows
+  para o app. Se a configuracao de privacidade bloquear o caminho real, a
+  selecao falha antes do boot em vez de deixar o core Bochs cair durante a
+  inicializacao.
+- O disco VVFAT compartilhado e propositalmente somente leitura. Escritas do
+  guest sao rejeitadas pelo backend de imagem, e a pasta original do host nao e
+  modificada.
 - Floppy via `uwp://...` depende do tamanho da imagem para detectar o tipo. Uma
   imagem com tamanho nao padronizado nao sera montada como floppy bootavel.
 - Imagens VHD/VDI/VMDK continuam usando os backends de imagem correspondentes do

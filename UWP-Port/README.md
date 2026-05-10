@@ -120,6 +120,8 @@ The current generator includes:
 - `floppya` when a floppy image is selected
 - `ata0` and `ata0-master` for HDD, with `mode=` inferred or selected in the UI
 - `ata0-slave` for ISO/CD-ROM
+- `ata1` and `ata1-master` for an optional live shared host folder mounted as
+  read-only VVFAT
 - `boot` with up to three ordered devices
 - `log: -`
 
@@ -163,6 +165,23 @@ Files and image modes:
   sizes are still rejected as unknown floppy images.
 - If brokered registration fails, the picker still falls back to copying into
   `LocalFolder` for compatibility.
+
+Live shared folder:
+
+- The Boot tab can mount a selected host folder as a live read-only VVFAT disk.
+- The generated entry uses `path="readonly:<host-folder>"`, `mode=vvfat` and a
+  `journal=` path inside `ApplicationData::Current->LocalFolder`, so Bochs does
+  not create VVFAT temporary files inside the host folder.
+- The VVFAT backend recognizes the `readonly:` prefix, marks the image as
+  `HDIMAGE_READONLY` and rejects guest writes before they can reach the host
+  directory.
+- Folder selection registers the folder in `FutureAccessList` and also verifies
+  that the Bochs core can enumerate the real path with Win32 APIs before the
+  configuration is accepted.
+- Because this is a real host path and not a snapshot, Windows may require the
+  app to have file system access enabled in Privacy & security settings. The
+  manifest declares the restricted `broadFileSystemAccess` capability for this
+  path-based access.
 
 ## Boot
 
@@ -276,6 +295,11 @@ save-state, sound and network state.
   files, such as some VMDK layouts, may still require copying to `LocalFolder`
   or keeping related files accessible together through the original format
   backend.
+- Live VVFAT shared folders depend on Windows file-system permission for the
+  app. If the privacy setting blocks the real path, selection fails before boot
+  instead of letting the Bochs core crash during startup.
+- The shared VVFAT disk is intentionally read-only. Guest writes are rejected by
+  the image backend, and the original host folder is not modified.
 - Floppy through `uwp://...` depends on the image size to detect the type. An
   image with a non-standard size will not be mounted as a bootable floppy.
 - VHD/VDI/VMDK images still use the corresponding Bochs image backends when

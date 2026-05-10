@@ -1016,7 +1016,11 @@ int vvfat_image_t::init_directories(const char* dirname)
     if (mapping->mode & MODE_DIRECTORY) {
       mapping->begin = cluster;
       if (read_directory(i)) {
-        BX_PANIC(("Could not read directory '%s'", mapping->path));
+        if (read_only) {
+          BX_ERROR(("Could not read readonly VVFAT directory '%s'", mapping->path));
+        } else {
+          BX_PANIC(("Could not read directory '%s'", mapping->path));
+        }
         return -1;
       }
       mapping = (mapping_t*)array_get(&this->mapping, i);
@@ -1229,8 +1233,14 @@ int vvfat_image_t::open(const char* dirname, int flags)
   UNUSED(flags);
   use_mbr_file = 0;
   use_boot_file = 0;
+  read_only = 0;
   fat_type = 0;
   sectors_per_cluster = 0;
+
+  if (!strncmp(dirname, "readonly:", 9)) {
+    read_only = 1;
+    dirname += 9;
+  }
 
   snprintf(path, BX_PATHNAME_LEN, "%s/%s", dirname, VVFAT_MBR);
   if (read_sector_from_file(path, mbr_buf, 0)) {
@@ -1385,7 +1395,9 @@ int vvfat_image_t::open(const char* dirname, int flags)
     memcpy(&first_sectors[offset_to_bootsector * 0x200], boot_buf, 0x200);
   }
 
-  init_directories(dirname);
+  if (init_directories(dirname) < 0) {
+    return -1;
+  }
   set_file_attributes();
 
   // VOLATILE WRITE SUPPORT
@@ -1408,11 +1420,19 @@ int vvfat_image_t::open(const char* dirname, int flags)
   filedes = mkstemp(redolog_temp);
 
   if (filedes < 0) {
-    BX_PANIC(("Can't create volatile redolog '%s'", redolog_temp));
+    if (read_only) {
+      BX_ERROR(("Can't create readonly VVFAT volatile redolog '%s'", redolog_temp));
+    } else {
+      BX_PANIC(("Can't create volatile redolog '%s'", redolog_temp));
+    }
     return -1;
   }
   if (redolog->create(filedes, REDOLOG_SUBTYPE_VOLATILE, hd_size) < 0) {
-    BX_PANIC(("Can't create volatile redolog '%s'", redolog_temp));
+    if (read_only) {
+      BX_ERROR(("Can't create readonly VVFAT volatile redolog '%s'", redolog_temp));
+    } else {
+      BX_PANIC(("Can't create volatile redolog '%s'", redolog_temp));
+    }
     return -1;
   }
 
@@ -2001,6 +2021,11 @@ ssize_t vvfat_image_t::read(void* buf, size_t count)
 
 ssize_t vvfat_image_t::write(const void* buf, size_t count)
 {
+  if (read_only) {
+    BX_ERROR(("VVFAT readonly write rejected: sector=%d, count=%u", sector_num, (unsigned)count));
+    return -1;
+  }
+
   ssize_t ret = 0;
   char *cbuf = (char*)buf;
   Bit32u scount = (Bit32u)(count / 512);
@@ -2037,5 +2062,5 @@ ssize_t vvfat_image_t::write(const void* buf, size_t count)
 
 Bit32u vvfat_image_t::get_capabilities(void)
 {
-  return HDIMAGE_HAS_GEOMETRY;
+  return HDIMAGE_HAS_GEOMETRY | (read_only ? HDIMAGE_READONLY : 0);
 }

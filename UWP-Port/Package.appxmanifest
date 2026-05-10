@@ -5,8 +5,9 @@
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:uap6="http://schemas.microsoft.com/appx/manifest/uap/windows10/6"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:iot="http://schemas.microsoft.com/appx/manifest/iot/windows10"
-  IgnorableNamespaces="uap mp uap6 iot">
+  IgnorableNamespaces="uap mp uap6 rescap iot">
 
   <Identity
     Name="5b4bfc1b-41f1-47a1-898e-32405bdbbc31"
@@ -48,6 +49,7 @@
 
   <Capabilities>
     <Capability Name="internetClient" />
+    <rescap:Capability Name="broadFileSystemAccess" />
     <uap:Capability Name="removableStorage"/>
     <uap6:Capability Name="graphicsCapture"/>
     <iot:Capability Name="lowLevelDevices"/>
