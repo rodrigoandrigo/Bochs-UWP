@@ -106,7 +106,11 @@ The configuration file is generated at
 The current generator includes:
 
 - `display_library: uwp_dx`
-- memory, CPU, BIOS and VGABIOS
+- memory, CPU, BIOS and VGABIOS. Guest RAM is clamped to the UI range
+  (16 MB to 8192 MB), and the resident Bochs host allocation is capped at
+  512 MB with 1 MB blocks, letting Bochs' `BX_LARGE_RAMFILE` overflow manager
+  handle larger guests without forcing the UWP process to reserve the full
+  guest size.
 - `clock: sync=both, time0=local, rtc_sync=1` so Bochs' native realtime and
   slowdown timers keep guest seconds aligned with host time
 - `pci: enabled=1, chipset=i440fx`

@@ -15,6 +15,12 @@ using namespace Windows::Storage::Pickers;
 
 namespace
 {
+	const int DefaultGuestMemoryMb = 512;
+	const int MinGuestMemoryMb = 16;
+	const int MaxGuestMemoryMb = 8192;
+	const int MaxResidentHostMemoryMb = 512;
+	const int UwpMemoryBlockSizeKb = 1024;
+
 	static bool StartsWithIgnoreCase(const std::wstring& value, const wchar_t *prefix)
 	{
 		size_t prefixLength = wcslen(prefix);
@@ -341,11 +347,8 @@ namespace
 		std::wstring boot = (bootTarget != nullptr && bootTarget->Length() > 0)
 			? std::wstring(bootTarget->Data())
 			: L"disk";
-		int memory = memoryMb >= 16 ? memoryMb : 512;
-		if (memory > 2048)
-		{
-			memory = 2048;
-		}
+		int memory = UWP_Port::BochsUwpStorage::NormalizeGuestMemoryMb(memoryMb);
+		int hostMemory = UWP_Port::BochsUwpStorage::EffectiveHostMemoryMb(memory);
 		std::wstring cpu = (cpuModel != nullptr && cpuModel->Length() > 0)
 			? std::wstring(cpuModel->Data())
 			: L"corei7_haswell_4770";
@@ -357,7 +360,9 @@ namespace
 		config += L"memory: guest=";
 		config += std::to_wstring(memory);
 		config += L", host=";
-		config += std::to_wstring(memory);
+		config += std::to_wstring(hostMemory);
+		config += L", block_size=";
+		config += std::to_wstring(UWP_Port::BochsUwpStorage::MemoryBlockSizeKb());
 		config += L"\n";
 		config += L"cpu: model=";
 		config += cpu;
@@ -747,6 +752,30 @@ String^ UWP_Port::BochsUwpStorage::DetectDiskImageMode(String^ diskPath)
 	std::wstring path = diskPath != nullptr ? std::wstring(diskPath->Data()) : std::wstring();
 	std::wstring mode = DetectDiskImageModeFromPath(path);
 	return ref new String(mode.c_str());
+}
+
+int UWP_Port::BochsUwpStorage::NormalizeGuestMemoryMb(int memoryMb)
+{
+	if (memoryMb < MinGuestMemoryMb)
+	{
+		return DefaultGuestMemoryMb;
+	}
+	if (memoryMb > MaxGuestMemoryMb)
+	{
+		return MaxGuestMemoryMb;
+	}
+	return memoryMb;
+}
+
+int UWP_Port::BochsUwpStorage::EffectiveHostMemoryMb(int memoryMb)
+{
+	int guestMemory = NormalizeGuestMemoryMb(memoryMb);
+	return (std::min)(guestMemory, MaxResidentHostMemoryMb);
+}
+
+int UWP_Port::BochsUwpStorage::MemoryBlockSizeKb()
+{
+	return UwpMemoryBlockSizeKb;
 }
 
 String^ UWP_Port::BochsUwpStorage::GetSaveStateFolderPath()

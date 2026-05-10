@@ -71,6 +71,9 @@ namespace UWP_Port
 		static concurrency::task<Platform::String^> PickCdromImageToLocalFolderAsync();
 		static concurrency::task<Platform::String^> PickBiosImageToLocalFolderAsync();
 		static Platform::String^ DetectDiskImageMode(Platform::String^ diskPath);
+		static int NormalizeGuestMemoryMb(int memoryMb);
+		static int EffectiveHostMemoryMb(int memoryMb);
+		static int MemoryBlockSizeKb();
 		static Platform::String^ GetSaveStateFolderPath();
 		static Platform::String^ GetSaveStateFolderPath(Platform::String^ slotId);
 		static concurrency::task<bool> HasSaveStateAsync();

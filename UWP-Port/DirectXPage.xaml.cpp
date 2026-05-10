@@ -1389,6 +1389,11 @@ void DirectXPage::UpdateDiagnosticSummary()
 	summary += SelectedSoundEnabled() ? L"ligado" : L"desligado";
 	summary += L", rede ";
 	summary += SelectedNetworkEnabled() ? L"ligada" : L"desligada";
+	summary += L"\nMemoria: guest ";
+	summary += std::to_wstring(SelectedMemoryMb());
+	summary += L" MB, host ";
+	summary += std::to_wstring(BochsUwpStorage::EffectiveHostMemoryMb(SelectedMemoryMb()));
+	summary += L" MB";
 	diagnosticSummaryText->Text = ref new String(summary.c_str());
 }
 
@@ -1444,19 +1449,10 @@ int DirectXPage::SelectedMemoryMb()
 {
 	if (memorySlider == nullptr)
 	{
-		return 512;
+		return BochsUwpStorage::NormalizeGuestMemoryMb(512);
 	}
 
-	int memory = static_cast<int>(memorySlider->Value + 0.5);
-	if (memory < 16)
-	{
-		memory = 16;
-	}
-	if (memory > 2048)
-	{
-		memory = 2048;
-	}
-	return memory;
+	return BochsUwpStorage::NormalizeGuestMemoryMb(static_cast<int>(memorySlider->Value + 0.5));
 }
 
 String^ DirectXPage::SelectedCpuModel()
@@ -1612,8 +1608,16 @@ void DirectXPage::UpdateMemoryLabel()
 		return;
 	}
 
-	std::wstring text = std::to_wstring(SelectedMemoryMb());
-	text += L" MB";
+	int guestMemory = SelectedMemoryMb();
+	int hostMemory = BochsUwpStorage::EffectiveHostMemoryMb(guestMemory);
+	std::wstring text = std::to_wstring(guestMemory);
+	text += L" MB guest";
+	if (hostMemory < guestMemory)
+	{
+		text += L"; host ";
+		text += std::to_wstring(hostMemory);
+		text += L" MB";
+	}
 	memoryValueText->Text = ref new String(text.c_str());
 	UpdateBochsrcPreview();
 }

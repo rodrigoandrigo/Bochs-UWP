@@ -326,7 +326,7 @@
           <Slider
               x:Name="memorySlider"
               Minimum="16"
-              Maximum="2048"
+              Maximum="8192"
               Value="512"
               StepFrequency="16"
               ValueChanged="MemorySlider_ValueChanged"

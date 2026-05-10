@@ -64,11 +64,6 @@ BX_MEMORY_STUB_C::BX_MEMORY_STUB_C()
 
 BX_MEMORY_STUB_C::~BX_MEMORY_STUB_C()
 {
-#if BX_LARGE_RAMFILE
-  if (overflow_file)
-    fclose(BX_MEM_THIS overflow_file);
-#endif
-
   cleanup_memory();
 }
 
@@ -245,6 +240,14 @@ void BX_MEMORY_STUB_C::allocate_block(Bit32u block)
 
 void BX_MEMORY_STUB_C::cleanup_memory()
 {
+#if BX_LARGE_RAMFILE
+  if (BX_MEM_THIS overflow_file) {
+    fclose(BX_MEM_THIS overflow_file);
+    BX_MEM_THIS overflow_file = NULL;
+  }
+  BX_MEM_THIS next_swapout_idx = 0;
+#endif
+
   if (BX_MEM_THIS vector != NULL) {
     delete [] BX_MEM_THIS actual_vector;
     BX_MEM_THIS actual_vector = NULL;
