@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{8703d442-01c8-4fb0-8fb1-c4d1c5cd94db}</ProjectGuid>
+    <Keyword>StaticLibrary</Keyword>
+    <RootNamespace>bochs_core_uwp</RootNamespace>
+    <DefaultLanguage>pt-BR</DefaultLanguage>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <ApplicationType>Windows Store</ApplicationType>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.17763.0</WindowsTargetPlatformMinVersion>
+    <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+
+  <ImportGroup Label="Shared" >
+  </ImportGroup>
+
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir)..;$(ProjectDir)..\instrument\stubs;$(ProjectDir)..\iodev;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_CRT_SECURE_NO_WARNINGS;BX_WITH_UWP_DX=1;BX_UWP_CORE_LIBRARY=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir)..;$(ProjectDir)..\instrument\stubs;$(ProjectDir)..\iodev;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_CRT_SECURE_NO_WARNINGS;BX_WITH_UWP_DX=1;BX_UWP_CORE_LIBRARY=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+    </Link>
+  </ItemDefinitionGroup>
+
+
+
+  <ItemGroup>
+    <ClInclude Include="bochs_core_uwp.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="targetver.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="bochs_core_uwp.cpp" />
+    <ClCompile Include="..\bxthread.cc">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\config.cc">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\crc.cc">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\logio.cc">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\main.cc">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\osdep.cc">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\pc_system.cc">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\plugin.cc">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\vs2019\avx.vcxproj">
+      <Project>{57a4215b-7e87-447a-a0f4-5bbc0866a3d8}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\bx_debug.vcxproj">
+      <Project>{88f11cbb-d14a-4981-a91a-bfe987c756e8}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\cpu.vcxproj">
+      <Project>{17e9ddbe-fc7e-4ee0-9f21-9fa0415f9ed8}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\cpudb.vcxproj">
+      <Project>{5328580d-7383-4acc-95c1-9258500b6e56}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\fpu.vcxproj">
+      <Project>{5661cd4e-ba54-4e67-a586-bb014ac94614}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\gui.vcxproj">
+      <Project>{1f5e4760-8d1e-47a7-9730-e29dcbb6701f}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\iodev.vcxproj">
+      <Project>{25a3cfb3-8943-4d9c-84be-da3e3c8a4115}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\iodev_display.vcxproj">
+      <Project>{0dc70e5e-80d6-4356-a9dc-49090850b7e9}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\iodev_hdimage.vcxproj">
+      <Project>{6e512ddf-6d73-4dc1-ac44-5bb01c1650ce}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\iodev_network.vcxproj">
+      <Project>{9efb2055-35e8-42e9-a274-f4987cb2a655}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\iodev_sound.vcxproj">
+      <Project>{5f8fc352-0076-4558-9153-ca93f50e63f4}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\iodev_usb.vcxproj">
+      <Project>{f49e6f86-a8c7-4101-b809-56cda5921808}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\memory.vcxproj">
+      <Project>{bbff892d-2f57-4561-b2d0-ed4c3a9b7051}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\softfloat3e.vcxproj">
+      <Project>{bda1eb83-d53e-41a7-825f-0efdc3d643e3}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+    <ProjectReference Include="..\vs2019\stubs.vcxproj">
+      <Project>{b107c955-4324-4990-bb79-6cbc91c6d12a}</Project>
+          <AdditionalProperties>UseUwpCoreRuntime=true</AdditionalProperties>
+    </ProjectReference>
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+
+</Project>

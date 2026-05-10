@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Source>C:\Users\rodri\Dev1\Projetos\bochs\UWP-Port\bochs.jpg</Source>
+    <SmallTileSource>C:\Users\rodri\Dev1\Projetos\bochs\UWP-Port\bochs.jpg</SmallTileSource>
+    <MediumTileSource>C:\Users\rodri\Dev1\Projetos\bochs\UWP-Port\bochs.jpg</MediumTileSource>
+    <WideTileSource>C:\Users\rodri\Dev1\Projetos\bochs\UWP-Port\bochs.jpg</WideTileSource>
+    <LargeTileSource>C:\Users\rodri\Dev1\Projetos\bochs\UWP-Port\bochs.jpg</LargeTileSource>
+    <AppIconSource>C:\Users\rodri\Dev1\Projetos\bochs\UWP-Port\bochs.jpg</AppIconSource>
+    <SplashScreenSource>C:\Users\rodri\Dev1\Projetos\bochs\UWP-Port\bochs.jpg</SplashScreenSource>
+    <PackageLogoSource>C:\Users\rodri\Dev1\Projetos\bochs\UWP-Port\bochs.jpg</PackageLogoSource>
+    <BadgeLogoSource>C:\Users\rodri\Dev1\Projetos\bochs\UWP-Port\bochs.jpg</BadgeLogoSource>
+  </PropertyGroup>
+</Project>

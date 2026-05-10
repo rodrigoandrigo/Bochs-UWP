@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tga;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Core Sources">
+      <UniqueIdentifier>{3A69D3E9-2D99-4D24-AC7C-ED158D956A2B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Public API">
+      <UniqueIdentifier>{4B2CDE41-F09A-45D9-A55E-A53CDA5F4680}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="bochs_core_uwp.h">
+      <Filter>Public API</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="targetver.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="bochs_core_uwp.cpp">
+      <Filter>Public API</Filter>
+    </ClCompile>
+    <ClCompile Include="..\bxthread.cc">
+      <Filter>Core Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\config.cc">
+      <Filter>Core Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\crc.cc">
+      <Filter>Core Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\logio.cc">
+      <Filter>Core Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\main.cc">
+      <Filter>Core Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\osdep.cc">
+      <Filter>Core Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\pc_system.cc">
+      <Filter>Core Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\plugin.cc">
+      <Filter>Core Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp" />
+  </ItemGroup>
+</Project>

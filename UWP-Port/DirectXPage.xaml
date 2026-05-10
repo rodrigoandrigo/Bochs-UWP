@@ -1,0 +1,551 @@
+<Page
+    x:Class="UWP_Port.DirectXPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:UWP_Port"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="Black">
+
+  <Page.Resources>
+    <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#E6000000" />
+    <SolidColorBrush x:Key="MutedTextBrush" Color="#FF9CA3AF" />
+    <SolidColorBrush x:Key="SectionLineBrush" Color="#FF5F6368" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#FF00C853" />
+  </Page.Resources>
+
+  <Grid Background="Black">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <CommandBar
+        x:Name="topCommandBar"
+        Grid.Row="0"
+        Height="56"
+        Background="#F01F1F1F"
+        Foreground="White"
+        HorizontalContentAlignment="Right">
+      <CommandBar.PrimaryCommands>
+        <AppBarButton
+            x:Name="toggleTabsButton"
+            Icon="Setting"
+            Label="Mostrar abas"
+            Click="ToggleTabsButton_Click"
+            Foreground="White" />
+        <AppBarButton
+            x:Name="startEmulatorButton"
+            Icon="Play"
+            Label="Iniciar"
+            Click="StartEmulatorButton_Click"
+            Foreground="White" />
+        <AppBarButton
+            x:Name="pauseButton"
+            Icon="Pause"
+            Label="Pausar"
+            Click="PauseButton_Click"
+            Foreground="White" />
+        <AppBarButton
+            x:Name="resumeButton"
+            Icon="Play"
+            Label="Retomar"
+            Click="ResumeButton_Click"
+            Foreground="White" />
+        <AppBarButton
+            x:Name="shutdownButton"
+            Icon="Stop"
+            Label="Desligar"
+            Click="ShutdownButton_Click"
+            Foreground="White" />
+        <AppBarButton
+            x:Name="saveButton"
+            Icon="Save"
+            Label="Salvar"
+            Click="SaveButton_Click"
+            Foreground="White" />
+        <AppBarButton
+            x:Name="restoreButton"
+            Icon="Refresh"
+            Label="Restaurar"
+            Click="RestoreButton_Click"
+            Foreground="White" />
+      </CommandBar.PrimaryCommands>
+    </CommandBar>
+
+    <Grid Grid.Row="1" Background="Black">
+    <SwapChainPanel x:Name="swapChainPanel" />
+
+    <Grid x:Name="readyOverlay" IsHitTestVisible="False">
+      <StackPanel
+          HorizontalAlignment="Center"
+          VerticalAlignment="Center"
+          Spacing="8">
+        <TextBlock
+            Text="Bochs Ready"
+            Foreground="White"
+            FontWeight="SemiBold"
+            HorizontalAlignment="Center" />
+        <TextBlock
+            Text="Pressione Iniciar para comecar."
+            Foreground="White"
+            FontSize="13"
+            HorizontalAlignment="Center" />
+        <FontIcon
+            Glyph="&#xE768;"
+            Foreground="White"
+            FontSize="52"
+            HorizontalAlignment="Center"
+            Opacity="0.95" />
+      </StackPanel>
+    </Grid>
+
+    <Grid
+        x:Name="topChrome"
+        Height="50"
+        VerticalAlignment="Top"
+        Visibility="Collapsed"
+        Background="#E61F1F1F">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <StackPanel
+            Grid.Column="0"
+            Orientation="Horizontal"
+            Spacing="18"
+            Margin="12,0,18,0"
+            VerticalAlignment="Center">
+          <AppBarButton
+              x:Name="bootTabButton"
+              Icon="Play"
+              Label="Boot"
+              Click="BootTabButton_Click"
+              Foreground="White"
+              IsCompact="True" />
+          <AppBarButton
+              x:Name="settingsTabButton"
+              Icon="Setting"
+              Label="Configuracoes"
+              Click="SettingsTabButton_Click"
+              Foreground="{StaticResource MutedTextBrush}"
+              IsCompact="True" />
+          <AppBarButton
+              x:Name="bochsrcTabButton"
+              Icon="Page"
+              Label="bochsrc"
+              Click="BochsrcTabButton_Click"
+              Foreground="{StaticResource MutedTextBrush}"
+              IsCompact="True" />
+          <AppBarButton
+              x:Name="problemsTabButton"
+              Icon="Comment"
+              Label="Problemas"
+              Click="ProblemsTabButton_Click"
+              Foreground="{StaticResource MutedTextBrush}"
+              IsCompact="True" />
+          <AppBarButton
+              x:Name="aboutTabButton"
+              Icon="Help"
+              Label="Sobre"
+              Click="AboutTabButton_Click"
+              Foreground="{StaticResource MutedTextBrush}"
+              IsCompact="True" />
+        </StackPanel>
+        <TextBlock
+            Grid.Column="1"
+            x:Name="startupStatusText"
+            Text="Selecione uma imagem de boot ou restaure um estado salvo."
+            Foreground="{StaticResource MutedTextBrush}"
+            FontSize="12"
+            TextTrimming="CharacterEllipsis"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Center"
+            TextAlignment="Right"
+            Margin="0,0,16,0" />
+        <Rectangle Grid.ColumnSpan="2" Height="2" Fill="#FF008CFF" VerticalAlignment="Bottom" />
+      </Grid>
+    </Grid>
+
+    <ScrollViewer
+        x:Name="configurationPanel"
+        Margin="0,50,0,0"
+        Background="{StaticResource PanelBackgroundBrush}"
+        Visibility="Collapsed"
+        VerticalScrollBarVisibility="Auto">
+      <Grid>
+        <StackPanel x:Name="bootPanel" Padding="12,10,12,24" Spacing="10">
+          <TextBlock Text="BIOS" Foreground="White" FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <AppBarButton
+                x:Name="resetBiosButton"
+                Icon="Refresh"
+                Label="Usar embutida"
+                Click="ResetBiosButton_Click"
+                Foreground="White" />
+            <AppBarButton
+                x:Name="selectBiosButton"
+                Icon="OpenFile"
+                Label="Selecionar BIOS"
+                Click="SelectBiosButton_Click"
+                Foreground="White" />
+          </StackPanel>
+          <TextBlock
+              x:Name="biosPathText"
+              Text="BIOS-bochs-latest embutida"
+              Foreground="{StaticResource MutedTextBrush}"
+              TextWrapping="WrapWholeWords"
+              MaxWidth="920" />
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <AppBarButton
+                x:Name="resetVgaBiosButton"
+                Icon="Refresh"
+                Label="Usar embutida"
+                Click="ResetVgaBiosButton_Click"
+                Foreground="White" />
+            <AppBarButton
+                x:Name="selectVgaBiosButton"
+                Icon="OpenFile"
+                Label="Selecionar VGA BIOS"
+                Click="SelectVgaBiosButton_Click"
+                Foreground="White" />
+          </StackPanel>
+          <TextBlock
+              x:Name="vgaBiosPathText"
+              Text="VGABIOS-lgpl-latest.bin embutida"
+              Foreground="{StaticResource MutedTextBrush}"
+              TextWrapping="WrapWholeWords"
+              MaxWidth="920" />
+
+          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
+          <TextBlock Text="Floppy" Foreground="White" FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <AppBarButton
+                x:Name="resetFloppyButton"
+                Icon="Delete"
+                Label="Remover"
+                Click="ResetFloppyButton_Click"
+                Foreground="White" />
+            <AppBarButton
+                x:Name="chooseFloppyButton"
+                Icon="OpenFile"
+                Label="Selecionar floppy"
+                Click="ChooseFloppyButton_Click"
+                Foreground="White" />
+          </StackPanel>
+          <TextBlock
+              x:Name="floppyPathText"
+              Text="Nenhum floppy selecionado"
+              Foreground="{StaticResource MutedTextBrush}"
+              TextWrapping="WrapWholeWords"
+              MaxWidth="920" />
+
+          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
+          <TextBlock Text="HDD" Foreground="White" FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <AppBarButton
+                x:Name="resetDiskButton"
+                Icon="Delete"
+                Label="Remover"
+                Click="ResetDiskButton_Click"
+                Foreground="White" />
+            <AppBarButton
+                x:Name="chooseDiskButton"
+                Icon="OpenFile"
+                Label="Selecionar HDD"
+                Click="ChooseDiskButton_Click"
+                Foreground="White" />
+          </StackPanel>
+          <TextBlock
+              x:Name="diskPathText"
+              Text="Nenhuma imagem selecionada"
+              Foreground="{StaticResource MutedTextBrush}"
+              TextWrapping="WrapWholeWords"
+              MaxWidth="920" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock
+                Text="Modo"
+                Foreground="White"
+                VerticalAlignment="Center" />
+            <ComboBox
+                x:Name="diskImageModeComboBox"
+                SelectedIndex="0"
+                SelectionChanged="DiskImageModeComboBox_SelectionChanged"
+                Width="220">
+              <ComboBoxItem Content="Automatico" Tag="auto" />
+              <ComboBoxItem Content="Raw / flat" Tag="flat" />
+              <ComboBoxItem Content="VHD / VirtualPC" Tag="vpc" />
+              <ComboBoxItem Content="VDI / VirtualBox" Tag="vbox" />
+              <ComboBoxItem Content="VMDK / VMware 4" Tag="vmware4" />
+              <ComboBoxItem Content="VMDK / VMware 3" Tag="vmware3" />
+              <ComboBoxItem Content="Sparse" Tag="sparse" />
+              <ComboBoxItem Content="Growing" Tag="growing" />
+              <ComboBoxItem Content="Undoable" Tag="undoable" />
+              <ComboBoxItem Content="Volatile" Tag="volatile" />
+            </ComboBox>
+            <TextBlock
+                x:Name="diskImageModeText"
+                Text="Modo efetivo: flat"
+                Foreground="{StaticResource MutedTextBrush}"
+                VerticalAlignment="Center"
+                TextWrapping="WrapWholeWords" />
+          </StackPanel>
+
+          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
+          <TextBlock Text="ISO / CD-ROM" Foreground="White" FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <AppBarButton
+                x:Name="resetCdromButton"
+                Icon="Delete"
+                Label="Remover"
+                Click="ResetCdromButton_Click"
+                Foreground="White" />
+            <AppBarButton
+                x:Name="chooseCdromButton"
+                Icon="OpenFile"
+                Label="Selecionar ISO"
+                Click="ChooseCdromButton_Click"
+                Foreground="White" />
+          </StackPanel>
+          <TextBlock
+              x:Name="cdromPathText"
+              Text="Nenhuma ISO selecionada"
+              Foreground="{StaticResource MutedTextBrush}"
+              TextWrapping="WrapWholeWords"
+              MaxWidth="920" />
+        </StackPanel>
+
+        <StackPanel
+            x:Name="settingsPanel"
+            Padding="12,10,12,24"
+            Spacing="10"
+            Visibility="Collapsed">
+          <TextBlock Text="MEMORIA" Foreground="White" FontWeight="SemiBold" />
+          <Slider
+              x:Name="memorySlider"
+              Minimum="16"
+              Maximum="2048"
+              Value="512"
+              StepFrequency="16"
+              ValueChanged="MemorySlider_ValueChanged"
+              Width="360"
+              HorizontalAlignment="Left"
+              Foreground="{StaticResource AccentBrush}" />
+          <TextBlock
+              x:Name="memoryValueText"
+              Text="512 MB"
+              Foreground="{StaticResource MutedTextBrush}" />
+          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
+
+          <TextBlock Text="MAQUINA" Foreground="White" FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="18">
+            <StackPanel Spacing="4">
+              <TextBlock Text="CPU" Foreground="White" />
+              <ComboBox
+                  x:Name="cpuModelComboBox"
+                  SelectedIndex="24"
+                  Width="360">
+                <ComboBoxItem Content="i386 - Intel 386SX" Tag="i386" />
+                <ComboBoxItem Content="i486dx4 - Intel 486DX4" Tag="i486dx4" />
+                <ComboBoxItem Content="pentium - Intel Pentium" Tag="pentium" />
+                <ComboBoxItem Content="pentium_mmx - Intel Pentium MMX" Tag="pentium_mmx" />
+                <ComboBoxItem Content="amd_k6_2_chomper - AMD K6-2" Tag="amd_k6_2_chomper" />
+                <ComboBoxItem Content="athlon_xp - AMD Athlon XP" Tag="athlon_xp" />
+                <ComboBoxItem Content="p2_klamath - Intel Pentium II" Tag="p2_klamath" />
+                <ComboBoxItem Content="p3_katmai - Intel Pentium III" Tag="p3_katmai" />
+                <ComboBoxItem Content="p4_willamette - Intel Pentium 4" Tag="p4_willamette" />
+                <ComboBoxItem Content="core_duo_t2400_yonah - Intel Core Duo" Tag="core_duo_t2400_yonah" />
+                <ComboBoxItem Content="atom_n270 - Intel Atom N270" Tag="atom_n270" />
+                <ComboBoxItem Content="p4_prescott_celeron_336 - Intel Celeron 336" Tag="p4_prescott_celeron_336" />
+                <ComboBoxItem Content="athlon64_clawhammer - AMD Athlon 64" Tag="athlon64_clawhammer" />
+                <ComboBoxItem Content="athlon64_venice - AMD Athlon 64 Venice" Tag="athlon64_venice" />
+                <ComboBoxItem Content="turion64_tyler - AMD Turion 64 X2" Tag="turion64_tyler" />
+                <ComboBoxItem Content="phenom_8650_toliman - AMD Phenom X3" Tag="phenom_8650_toliman" />
+                <ComboBoxItem Content="core2_penryn_t9600 - Intel Core 2 Duo" Tag="core2_penryn_t9600" />
+                <ComboBoxItem Content="corei5_lynnfield_750 - Intel Core i5 750" Tag="corei5_lynnfield_750" />
+                <ComboBoxItem Content="corei5_arrandale_m520 - Intel Core i5 M 520" Tag="corei5_arrandale_m520" />
+                <ComboBoxItem Content="corei7_sandy_bridge_2600k - Intel Core i7-2600K" Tag="corei7_sandy_bridge_2600k" />
+                <ComboBoxItem Content="zambezi - AMD FX-4100" Tag="zambezi" />
+                <ComboBoxItem Content="trinity_apu - AMD A8-5600K" Tag="trinity_apu" />
+                <ComboBoxItem Content="ryzen - AMD Ryzen 7 1700" Tag="ryzen" />
+                <ComboBoxItem Content="corei7_ivy_bridge_3770k - Intel Core i7-3770K" Tag="corei7_ivy_bridge_3770k" />
+                <ComboBoxItem Content="corei7_haswell_4770 - Intel Core i7-4770" Tag="corei7_haswell_4770" />
+                <ComboBoxItem Content="broadwell_ult - Intel Broadwell 5Y70" Tag="broadwell_ult" />
+                <ComboBoxItem Content="corei7_skylake_x - Intel Core i7-7800X" Tag="corei7_skylake_x" />
+                <ComboBoxItem Content="corei3_cnl - Intel Core i3-8121U" Tag="corei3_cnl" />
+                <ComboBoxItem Content="corei7_icelake_u - Intel Core i7-1065G7" Tag="corei7_icelake_u" />
+                <ComboBoxItem Content="tigerlake - Intel Core i5-1135G7" Tag="tigerlake" />
+                <ComboBoxItem Content="sapphire_rapids - Intel Xeon w9-3475X" Tag="sapphire_rapids" />
+                <ComboBoxItem Content="arrow_lake - Intel Core Ultra 5 245K" Tag="arrow_lake" />
+              </ComboBox>
+            </StackPanel>
+            <StackPanel Spacing="4">
+              <TextBlock Text="Boot" Foreground="White" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <ComboBox
+                    x:Name="bootDeviceComboBox"
+                    SelectedIndex="0"
+                    SelectionChanged="BootDeviceComboBox_SelectionChanged"
+                    Width="88">
+                  <ComboBoxItem Content="HDD" Tag="disk" />
+                  <ComboBoxItem Content="ISO" Tag="cdrom" />
+                  <ComboBoxItem Content="Floppy" Tag="floppy" />
+                </ComboBox>
+                <ComboBox
+                    x:Name="bootDevice2ComboBox"
+                    SelectedIndex="1"
+                    SelectionChanged="BootDeviceComboBox_SelectionChanged"
+                    Width="88">
+                  <ComboBoxItem Content="HDD" Tag="disk" />
+                  <ComboBoxItem Content="ISO" Tag="cdrom" />
+                  <ComboBoxItem Content="Floppy" Tag="floppy" />
+                  <ComboBoxItem Content="Nenhum" Tag="none" />
+                </ComboBox>
+                <ComboBox
+                    x:Name="bootDevice3ComboBox"
+                    SelectedIndex="2"
+                    SelectionChanged="BootDeviceComboBox_SelectionChanged"
+                    Width="88">
+                  <ComboBoxItem Content="HDD" Tag="disk" />
+                  <ComboBoxItem Content="ISO" Tag="cdrom" />
+                  <ComboBoxItem Content="Floppy" Tag="floppy" />
+                  <ComboBoxItem Content="Nenhum" Tag="none" />
+                </ComboBox>
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+
+          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
+          <TextBlock Text="AUDIO E REDE" Foreground="White" FontWeight="SemiBold" />
+          <ToggleSwitch x:Name="soundToggleSwitch" Header="Som SB16/ES1370 via XAudio2" IsOn="True" OnContent="On" OffContent="Off" Foreground="White" />
+          <ToggleSwitch x:Name="networkToggleSwitch" Header="Rede NE2K via slirp" IsOn="True" OnContent="On" OffContent="Off" Foreground="White" />
+
+          <Rectangle Height="1" Fill="{StaticResource SectionLineBrush}" />
+          <TextBlock Text="SAVE STATE" Foreground="White" FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <ComboBox
+                x:Name="saveStateSlotComboBox"
+                SelectedIndex="0"
+                SelectionChanged="SaveStateSlotComboBox_SelectionChanged"
+                Width="150">
+              <ComboBoxItem Content="Slot 1" Tag="1" />
+              <ComboBoxItem Content="Slot 2" Tag="2" />
+              <ComboBoxItem Content="Slot 3" Tag="3" />
+            </ComboBox>
+            <TextBlock
+                x:Name="saveStateSlotStatusText"
+                Text="Verificando slot..."
+                Foreground="{StaticResource MutedTextBrush}"
+                VerticalAlignment="Center"
+                TextWrapping="WrapWholeWords" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel
+            x:Name="bochsrcPanel"
+            Padding="12,10,12,24"
+            Spacing="8"
+            Visibility="Collapsed">
+          <TextBlock Text="bochsrc" Foreground="White" FontWeight="SemiBold" />
+          <Border
+              BorderBrush="{StaticResource SectionLineBrush}"
+              BorderThickness="1"
+              Padding="10"
+              MinHeight="360">
+            <RichTextBlock
+                x:Name="bochsrcRichTextBlock"
+                FontFamily="Consolas"
+                FontSize="12"
+                Foreground="{StaticResource MutedTextBrush}"
+                IsTextSelectionEnabled="True"
+                TextWrapping="Wrap">
+              <Paragraph>
+                <Run Text="A configuracao gerada aparecera aqui antes de iniciar." />
+              </Paragraph>
+            </RichTextBlock>
+          </Border>
+        </StackPanel>
+
+        <StackPanel
+            x:Name="problemsPanel"
+            Padding="12,10,12,24"
+            Spacing="8"
+            Visibility="Collapsed">
+          <TextBlock Text="Problemas" Foreground="White" FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <AppBarButton
+                x:Name="clearProblemsButton"
+                Icon="Delete"
+                Label="Limpar"
+                Click="ClearProblemsButton_Click"
+                Foreground="White" />
+            <TextBlock
+                x:Name="problemCountText"
+                Text="0 eventos"
+                Foreground="{StaticResource MutedTextBrush}"
+                VerticalAlignment="Center" />
+          </StackPanel>
+          <Border
+              BorderBrush="{StaticResource SectionLineBrush}"
+              BorderThickness="1"
+              Padding="10"
+              MinHeight="96">
+            <TextBlock
+                x:Name="diagnosticSummaryText"
+                Foreground="{StaticResource MutedTextBrush}"
+                TextWrapping="WrapWholeWords"
+                Text="Diagnostico ainda nao calculado." />
+          </Border>
+          <Border
+              BorderBrush="{StaticResource SectionLineBrush}"
+              BorderThickness="1"
+              Padding="10"
+              MinHeight="360">
+            <RichTextBlock
+                x:Name="problemLogRichTextBlock"
+                FontFamily="Consolas"
+                FontSize="12"
+                Foreground="{StaticResource MutedTextBrush}"
+                IsTextSelectionEnabled="True"
+                TextWrapping="Wrap">
+              <Paragraph>
+                <Run Text="Nenhum problema registrado nesta sessao." />
+              </Paragraph>
+            </RichTextBlock>
+          </Border>
+        </StackPanel>
+
+        <StackPanel
+            x:Name="aboutPanel"
+            Padding="12,10,12,24"
+            Spacing="8"
+            Visibility="Collapsed">
+          <TextBlock Text="Sobre" Foreground="White" FontWeight="SemiBold" />
+          <TextBlock
+              Text="UWP-Port e uma versao UWP do Bochs com renderizacao DirectX, configuracao interna de boot, suporte a HDD/floppy/ISO, save-state por slots, diagnosticos, entrada de teclado e mouse, audio nativo e rede slirp."
+              Foreground="{StaticResource MutedTextBrush}"
+              TextWrapping="WrapWholeWords"
+              MaxWidth="960" />
+          <Border
+              BorderBrush="{StaticResource SectionLineBrush}"
+              BorderThickness="1"
+              Padding="10"
+              MaxWidth="960"
+              HorizontalAlignment="Left">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Resumo do app" Foreground="White" FontWeight="SemiBold" />
+              <TextBlock
+                Text="O app prepara uma configuracao bochsrc a partir da interface, inicia o core Bochs embutido e exibe o framebuffer em um SwapChainPanel. Os paineis permitem escolher imagens, ajustar memoria e CPU, alternar audio/rede, acompanhar problemas e revisar a configuracao final antes do boot."
+                Foreground="{StaticResource MutedTextBrush}"
+                TextWrapping="WrapWholeWords" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Grid>
+    </ScrollViewer>
+
+    </Grid>
+  </Grid>
+</Page>
