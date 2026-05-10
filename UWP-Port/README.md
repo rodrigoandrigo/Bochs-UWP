@@ -107,6 +107,8 @@ The current generator includes:
 
 - `display_library: uwp_dx`
 - memory, CPU, BIOS and VGABIOS
+- `clock: sync=both, time0=local, rtc_sync=1` so Bochs' native realtime and
+  slowdown timers keep guest seconds aligned with host time
 - `pci: enabled=1, chipset=i440fx`
 - `plugin_ctrl` for audio, network and optional devices
 - `sound`, `speaker`, `sb16`, `es1370`

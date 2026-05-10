@@ -362,6 +362,7 @@ namespace
 		config += L"cpu: model=";
 		config += cpu;
 		config += L", count=1, ips=50000000, reset_on_triple_fault=1, ignore_bad_msrs=1, cpuid_limit_winnt=0\n";
+		config += L"clock: sync=both, time0=local, rtc_sync=1\n";
 		config += L"romimage: file=\"";
 		config += bios;
 		config += L"\"\n";

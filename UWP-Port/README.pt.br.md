@@ -106,6 +106,8 @@ O gerador atual inclui:
 
 - `display_library: uwp_dx`
 - memoria, CPU, BIOS e VGABIOS
+- `clock: sync=both, time0=local, rtc_sync=1` para que os timers nativos de
+  realtime e slowdown do Bochs mantenham os segundos do guest alinhados ao host
 - `pci: enabled=1, chipset=i440fx`
 - `plugin_ctrl` para audio, rede e dispositivos opcionais
 - `sound`, `speaker`, `sb16`, `es1370`
