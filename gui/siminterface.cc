@@ -373,15 +373,21 @@ int bx_cleanup_siminterface()
 {
   if (siminterface_log) {
     delete siminterface_log;
+    siminterface_log = NULL;
   }
   if (root_param) {
     root_param->clear();
     delete root_param;
     root_param = NULL;
   }
+#if defined(BX_UWP_CORE_LIBRARY)
+  io->exit_log();
+#else
   io->exit_log2();
+#endif
   int exit_code = SIM->get_exit_code();
   delete SIM;
+  SIM = NULL;
   return exit_code;
 }
 

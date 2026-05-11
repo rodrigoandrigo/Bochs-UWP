@@ -1790,10 +1790,15 @@ void bx_reset_options()
 void bx_cleanup_options()
 {
   free(config_interface_list);
+  config_interface_list = NULL;
   free(display_library_list);
+  display_library_list = NULL;
   free(vga_extension_names);
+  vga_extension_names = NULL;
   free(vga_extension_plugins);
+  vga_extension_plugins = NULL;
   free(pcislot_dev_list);
+  pcislot_dev_list = NULL;
 }
 
 int bx_read_configuration(const char *rcfile)

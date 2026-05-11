@@ -676,6 +676,7 @@ void plugin_cleanup(void)
   plugin_cleanup_np();
 #endif
   delete pluginlog;
+  pluginlog = NULL;
 }
 
 

@@ -624,6 +624,7 @@ enum {
       bx_gui = theGui;                                                  \
     } else if (mode == PLUGIN_FINI) {                                   \
       delete theGui;                                                    \
+      theGui = NULL;                                                    \
       bx_gui = NULL;                                                    \
     } else if (mode == PLUGIN_PROBE) {                                  \
       return (int)PLUGTYPE_GUI;                                         \

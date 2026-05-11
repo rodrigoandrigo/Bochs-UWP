@@ -189,7 +189,21 @@ bool BochsRuntime::SaveStateIfPossible(Platform::String^ savePath)
 
 void BochsRuntime::RequestShutdown()
 {
-	m_shutdownRequested = true;
+	bool expected = false;
+	if (!m_shutdownRequested.compare_exchange_strong(expected, true))
+	{
+		if (m_thread.joinable())
+		{
+			m_thread.join();
+		}
+
+		m_paused = false;
+		m_running = false;
+		m_started = false;
+		m_exited = true;
+		return;
+	}
+
 	m_paused = false;
 	bochs_core_uwp_request_shutdown();
 	m_stateChanged.notify_all();
