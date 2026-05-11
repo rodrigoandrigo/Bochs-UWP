@@ -1,3 +1,55 @@
+The port is in UWP-Port
+
+`Ctrl+Alt+M` Disables and enables the mouse and keyboard.
+
+## Start
+
+<img align="center" src="images/Image1.png">
+
+## Boot
+
+<img align="center" src="images/Image2.png">
+
+## Settings
+
+<img align="center" src="images/Image3.png">
+
+## bochsrc
+
+<img align="center" src="images/Image4.png">
+
+## HDD
+
+<img align="center" src="images/Image5.png">
+
+## Floppy
+
+<img align="center" src="images/Image6.png">
+
+## Start Floppy
+
+<img align="center" src="images/Image7.png">
+
+## Windows 1.01
+
+<img align="center" src="images/Image8.png">
+
+## Freedos
+
+<img align="center" src="images/Image9.png">
+
+## WInUI for UWP build
+
+<img align="center" src="images/Image10.png">
+
+## References
+
+https://github.com/bochs-emu/Bochs
+
+https://github.com/mediaexplorer74/x86Emulator
+
+
+
 Bochs - The cross platform IA-32 (x86) emulator
 Updated: Sun Feb 16 10:00:00 CET 2025
 Version: 3.0
