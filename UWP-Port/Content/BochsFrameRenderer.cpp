@@ -3,6 +3,7 @@
 
 #include "..\Common\DirectXHelper.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 
@@ -24,6 +25,8 @@ BochsFrameRenderer::BochsFrameRenderer(const std::shared_ptr<DX::DeviceResources
 	m_deviceResources(deviceResources),
 	m_textureWidth(0),
 	m_textureHeight(0),
+	m_sourceWidth(0),
+	m_sourceHeight(0),
 	m_loadingComplete(false)
 {
 	CreateDeviceDependentResources();
@@ -139,11 +142,85 @@ void BochsFrameRenderer::ReleaseDeviceDependentResources()
 	m_constantBuffer.Reset();
 	m_textureWidth = 0;
 	m_textureHeight = 0;
+	m_sourceWidth = 0;
+	m_sourceHeight = 0;
+	m_scaledPixels.clear();
+}
+
+unsigned BochsFrameRenderer::MaxTextureDimension() const
+{
+	D3D_FEATURE_LEVEL level = m_deviceResources->GetD3DDevice()->GetFeatureLevel();
+	if (level >= D3D_FEATURE_LEVEL_10_0)
+	{
+		return D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+	}
+	if (level >= D3D_FEATURE_LEVEL_9_3)
+	{
+		return 4096;
+	}
+	return 2048;
+}
+
+Windows::Foundation::Size BochsFrameRenderer::UploadTextureSize(const BochsFrameSnapshot& frame) const
+{
+	unsigned maxDimension = MaxTextureDimension();
+	if (frame.width <= maxDimension && frame.height <= maxDimension)
+	{
+		return Windows::Foundation::Size(
+			static_cast<float>(frame.width),
+			static_cast<float>(frame.height));
+	}
+
+	float scale = (std::min)(
+		static_cast<float>(maxDimension) / static_cast<float>(frame.width),
+		static_cast<float>(maxDimension) / static_cast<float>(frame.height));
+	unsigned width = (std::max)(1u, static_cast<unsigned>(static_cast<float>(frame.width) * scale));
+	unsigned height = (std::max)(1u, static_cast<unsigned>(static_cast<float>(frame.height) * scale));
+	return Windows::Foundation::Size(static_cast<float>(width), static_cast<float>(height));
+}
+
+bool BochsFrameRenderer::UsesScaledUpload(const BochsFrameSnapshot& frame) const
+{
+	Windows::Foundation::Size uploadSize = UploadTextureSize(frame);
+	return static_cast<unsigned>(uploadSize.Width) != frame.width ||
+		static_cast<unsigned>(uploadSize.Height) != frame.height;
+}
+
+const std::vector<uint32_t>& BochsFrameRenderer::BuildScaledPixels(const BochsFrameSnapshot& frame)
+{
+	Windows::Foundation::Size uploadSize = UploadTextureSize(frame);
+	unsigned width = static_cast<unsigned>(uploadSize.Width);
+	unsigned height = static_cast<unsigned>(uploadSize.Height);
+	m_scaledPixels.resize(static_cast<size_t>(width) * static_cast<size_t>(height));
+
+	for (unsigned y = 0; y < height; y++)
+	{
+		unsigned sourceY = static_cast<unsigned>(
+			(static_cast<unsigned long long>(y) * frame.height) / height);
+		const uint32_t* sourceRow = frame.pixels.data() + static_cast<size_t>(sourceY) * frame.width;
+		uint32_t* targetRow = m_scaledPixels.data() + static_cast<size_t>(y) * width;
+		for (unsigned x = 0; x < width; x++)
+		{
+			unsigned sourceX = static_cast<unsigned>(
+				(static_cast<unsigned long long>(x) * frame.width) / width);
+			targetRow[x] = sourceRow[sourceX];
+		}
+	}
+
+	return m_scaledPixels;
 }
 
 void BochsFrameRenderer::EnsureFrameTexture(const BochsFrameSnapshot& frame)
 {
-	if (m_frameTexture && m_textureWidth == frame.width && m_textureHeight == frame.height)
+	Windows::Foundation::Size uploadSize = UploadTextureSize(frame);
+	unsigned textureWidth = static_cast<unsigned>(uploadSize.Width);
+	unsigned textureHeight = static_cast<unsigned>(uploadSize.Height);
+
+	if (m_frameTexture &&
+		m_textureWidth == textureWidth &&
+		m_textureHeight == textureHeight &&
+		m_sourceWidth == frame.width &&
+		m_sourceHeight == frame.height)
 	{
 		return;
 	}
@@ -152,16 +229,16 @@ void BochsFrameRenderer::EnsureFrameTexture(const BochsFrameSnapshot& frame)
 	m_frameTextureView.Reset();
 
 	D3D11_TEXTURE2D_DESC textureDesc = {};
-	textureDesc.Width = frame.width;
-	textureDesc.Height = frame.height;
+	textureDesc.Width = textureWidth;
+	textureDesc.Height = textureHeight;
 	textureDesc.MipLevels = 1;
 	textureDesc.ArraySize = 1;
 	textureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 	textureDesc.SampleDesc.Count = 1;
 	textureDesc.SampleDesc.Quality = 0;
-	textureDesc.Usage = D3D11_USAGE_DYNAMIC;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
 	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	textureDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	textureDesc.CPUAccessFlags = 0;
 
 	DX::ThrowIfFailed(
 		m_deviceResources->GetD3DDevice()->CreateTexture2D(
@@ -183,29 +260,60 @@ void BochsFrameRenderer::EnsureFrameTexture(const BochsFrameSnapshot& frame)
 		)
 	);
 
-	m_textureWidth = frame.width;
-	m_textureHeight = frame.height;
+	m_textureWidth = textureWidth;
+	m_textureHeight = textureHeight;
+	m_sourceWidth = frame.width;
+	m_sourceHeight = frame.height;
 }
 
 void BochsFrameRenderer::UploadFrameTexture(const BochsFrameSnapshot& frame)
 {
-	D3D11_MAPPED_SUBRESOURCE mapped = {};
-	auto context = m_deviceResources->GetD3DDeviceContext();
-	DX::ThrowIfFailed(
-		context->Map(m_frameTexture.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)
-	);
-
-	const uint8_t* src = reinterpret_cast<const uint8_t*>(frame.pixels.data());
-	uint8_t* dst = static_cast<uint8_t*>(mapped.pData);
-	const unsigned rowBytes = frame.width * 4;
-	for (unsigned row = 0; row < frame.height; row++)
+	if (frame.pixels.empty())
 	{
-		memcpy(dst, src, rowBytes);
-		src += rowBytes;
-		dst += mapped.RowPitch;
+		return;
 	}
 
-	context->Unmap(m_frameTexture.Get(), 0);
+	auto context = m_deviceResources->GetD3DDeviceContext();
+	if (UsesScaledUpload(frame))
+	{
+		const std::vector<uint32_t>& scaledPixels = BuildScaledPixels(frame);
+		context->UpdateSubresource1(
+			m_frameTexture.Get(),
+			0,
+			nullptr,
+			scaledPixels.data(),
+			m_textureWidth * 4,
+			0,
+			0);
+		return;
+	}
+
+	const void* source = frame.pixels.data();
+	const D3D11_BOX* updateBox = nullptr;
+	D3D11_BOX dirtyBox = {};
+	if (frame.dirtyRect.valid &&
+		frame.dirtyRect.width > 0 &&
+		frame.dirtyRect.height > 0 &&
+		(frame.dirtyRect.width != frame.width || frame.dirtyRect.height != frame.height))
+	{
+		dirtyBox.left = frame.dirtyRect.x;
+		dirtyBox.top = frame.dirtyRect.y;
+		dirtyBox.front = 0;
+		dirtyBox.right = frame.dirtyRect.x + frame.dirtyRect.width;
+		dirtyBox.bottom = frame.dirtyRect.y + frame.dirtyRect.height;
+		dirtyBox.back = 1;
+		updateBox = &dirtyBox;
+		source = frame.pixels.data() + static_cast<size_t>(frame.dirtyRect.y) * frame.width + frame.dirtyRect.x;
+	}
+
+	context->UpdateSubresource1(
+		m_frameTexture.Get(),
+		0,
+		updateBox,
+		source,
+		frame.width * 4,
+		0,
+		0);
 }
 
 BochsFrameConstants BochsFrameRenderer::BuildConstants(const BochsFrameSnapshot& frame) const
@@ -247,10 +355,15 @@ bool BochsFrameRenderer::Render()
 		return true;
 	}
 
-	BochsFrameSnapshot frame = BochsUwpBridge::CopyFrame();
+	BochsFrameSnapshot frame = BochsUwpBridge::CopyFrame(m_frameTexture == nullptr);
 	if (!frame.valid)
 	{
 		return true;
+	}
+	if (frame.pixels.empty() &&
+		(m_frameTexture == nullptr || m_sourceWidth != frame.width || m_sourceHeight != frame.height))
+	{
+		frame = BochsUwpBridge::CopyFrame(true);
 	}
 
 	EnsureFrameTexture(frame);

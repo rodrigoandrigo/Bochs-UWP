@@ -8,6 +8,15 @@
 
 namespace UWP_Port
 {
+	struct BochsDirtyRect
+	{
+		unsigned x;
+		unsigned y;
+		unsigned width;
+		unsigned height;
+		bool valid;
+	};
+
 	struct BochsFrameSnapshot
 	{
 		unsigned width;
@@ -16,6 +25,7 @@ namespace UWP_Port
 		unsigned bpp;
 		bool valid;
 		bool dirty;
+		BochsDirtyRect dirtyRect;
 		std::vector<uint32_t> pixels;
 		std::string statusText;
 	};
@@ -23,7 +33,7 @@ namespace UWP_Port
 	class BochsUwpBridge
 	{
 	public:
-		static BochsFrameSnapshot CopyFrame();
+		static BochsFrameSnapshot CopyFrame(bool forcePixels = false);
 		static void SendNativeKey(unsigned nativeKey, bool pressed);
 		static void SendPointer(int x, int y, int z, unsigned buttons, bool absolute);
 		static void SendFocus(bool focused);

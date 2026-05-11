@@ -14,6 +14,39 @@ namespace
 	bool g_mouseCaptured = false;
 	bool g_mouseAbsolute = false;
 	bool g_presentRequested = false;
+
+	void SetFullDirtyRect()
+	{
+		g_frame.dirtyRect.x = 0;
+		g_frame.dirtyRect.y = 0;
+		g_frame.dirtyRect.width = g_frame.width;
+		g_frame.dirtyRect.height = g_frame.height;
+		g_frame.dirtyRect.valid = g_frame.valid;
+	}
+
+	void IncludeDirtyRect(unsigned x, unsigned y, unsigned width, unsigned height)
+	{
+		if (!g_frame.valid || width == 0 || height == 0)
+		{
+			return;
+		}
+
+		if (!g_frame.dirtyRect.valid)
+		{
+			g_frame.dirtyRect = BochsDirtyRect{ x, y, width, height, true };
+			return;
+		}
+
+		unsigned left = (std::min)(g_frame.dirtyRect.x, x);
+		unsigned top = (std::min)(g_frame.dirtyRect.y, y);
+		unsigned right = (std::max)(g_frame.dirtyRect.x + g_frame.dirtyRect.width, x + width);
+		unsigned bottom = (std::max)(g_frame.dirtyRect.y + g_frame.dirtyRect.height, y + height);
+		g_frame.dirtyRect.x = left;
+		g_frame.dirtyRect.y = top;
+		g_frame.dirtyRect.width = right - left;
+		g_frame.dirtyRect.height = bottom - top;
+		g_frame.dirtyRect.valid = true;
+	}
 }
 
 extern "C" void bx_uwp_dx_host_set_sink(const bx_uwp_dx_sink_t *sink)
@@ -33,6 +66,7 @@ extern "C" void bx_uwp_dx_host_configure(unsigned width, unsigned height,
 	g_frame.valid = (width > 0) && (height > 0) && (pitch >= width * 4) && (bpp == 32);
 	g_frame.dirty = true;
 	g_frame.pixels.assign(g_frame.valid ? width * height : 0, 0xff000000);
+	SetFullDirtyRect();
 }
 
 extern "C" void bx_uwp_dx_host_update_rect(const void *bgra, unsigned sourcePitch,
@@ -63,6 +97,7 @@ extern "C" void bx_uwp_dx_host_update_rect(const void *bgra, unsigned sourcePitc
 	}
 
 	g_frame.dirty = true;
+	IncludeDirtyRect(x, y, width, height);
 }
 
 extern "C" void bx_uwp_dx_host_present(void)
@@ -85,6 +120,7 @@ extern "C" void bx_uwp_dx_host_clear(unsigned bgra)
 		std::fill(row, row + g_frame.width, bgra);
 	}
 	g_frame.dirty = true;
+	SetFullDirtyRect();
 	g_presentRequested = true;
 }
 
@@ -106,12 +142,33 @@ extern "C" void bx_uwp_dx_host_set_status_text(const char *text)
 	g_frame.statusText = text ? text : "";
 }
 
-BochsFrameSnapshot BochsUwpBridge::CopyFrame()
+BochsFrameSnapshot BochsUwpBridge::CopyFrame(bool forcePixels)
 {
 	std::lock_guard<std::mutex> lock(g_bridgeMutex);
-	BochsFrameSnapshot copy = g_frame;
-	copy.dirty = g_frame.dirty || g_presentRequested;
-	g_frame.dirty = false;
+	bool includePixels = g_frame.valid && (g_frame.dirty || forcePixels);
+	BochsFrameSnapshot copy = {};
+	copy.width = g_frame.width;
+	copy.height = g_frame.height;
+	copy.pitch = g_frame.pitch;
+	copy.bpp = g_frame.bpp;
+	copy.valid = g_frame.valid;
+	copy.statusText = g_frame.statusText;
+	copy.dirty = includePixels;
+	if (includePixels)
+	{
+		copy.pixels = g_frame.pixels;
+		copy.dirtyRect = g_frame.dirtyRect;
+		if (forcePixels && !g_frame.dirty)
+		{
+			copy.dirtyRect = BochsDirtyRect{ 0, 0, g_frame.width, g_frame.height, g_frame.valid };
+		}
+	}
+
+	if (g_frame.dirty)
+	{
+		g_frame.dirty = false;
+		g_frame.dirtyRect = BochsDirtyRect{};
+	}
 	g_presentRequested = false;
 	return copy;
 }

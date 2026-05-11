@@ -24,6 +24,10 @@ namespace UWP_Port
 		void EnsureFrameTexture(const BochsFrameSnapshot& frame);
 		void UploadFrameTexture(const BochsFrameSnapshot& frame);
 		BochsFrameConstants BuildConstants(const BochsFrameSnapshot& frame) const;
+		unsigned MaxTextureDimension() const;
+		Windows::Foundation::Size UploadTextureSize(const BochsFrameSnapshot& frame) const;
+		bool UsesScaledUpload(const BochsFrameSnapshot& frame) const;
+		const std::vector<uint32_t>& BuildScaledPixels(const BochsFrameSnapshot& frame);
 
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vertexShader;
@@ -36,6 +40,9 @@ namespace UWP_Port
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_constantBuffer;
 		unsigned m_textureWidth;
 		unsigned m_textureHeight;
+		unsigned m_sourceWidth;
+		unsigned m_sourceHeight;
+		std::vector<uint32_t> m_scaledPixels;
 		bool m_loadingComplete;
 	};
 }

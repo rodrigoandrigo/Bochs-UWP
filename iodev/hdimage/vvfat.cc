@@ -47,6 +47,8 @@
 #ifndef WIN32
 #include <dirent.h>
 #include <utime.h>
+#else
+#include <io.h>
 #endif
 
 #include "bochs.h"
@@ -54,6 +56,10 @@
 #include "gui/siminterface.h"
 #include "hdimage.h"
 #include "vvfat.h"
+
+#if defined(WIN32) && defined(BX_UWP_CORE_LIBRARY)
+#include <string>
+#endif
 
 #define LOG_THIS bx_hdimage_ctl.
 
@@ -87,11 +93,144 @@ protected:
 
 static int vvfat_count = 0;
 
+#if defined(WIN32) && defined(BX_UWP_CORE_LIBRARY)
+static bool bx_utf8_to_wide(const char *value, std::wstring& out)
+{
+  out.clear();
+  if (value == NULL) {
+    return false;
+  }
+  int length = MultiByteToWideChar(CP_UTF8, 0, value, -1, NULL, 0);
+  if (length <= 0) {
+    return false;
+  }
+  out.assign((size_t)length - 1, L'\0');
+  return MultiByteToWideChar(CP_UTF8, 0, value, -1, &out[0], length) > 0;
+}
+
+static bool bx_wide_to_utf8(const wchar_t *value, std::string& out)
+{
+  out.clear();
+  if (value == NULL) {
+    return false;
+  }
+  int length = WideCharToMultiByte(CP_UTF8, 0, value, -1, NULL, 0, NULL, NULL);
+  if (length <= 0) {
+    return false;
+  }
+  out.assign((size_t)length - 1, '\0');
+  return WideCharToMultiByte(CP_UTF8, 0, value, -1, &out[0], length, NULL, NULL) > 0;
+}
+
+static int bx_vvfat_open(const char *path, int flags, int pmode = 0)
+{
+  std::wstring wide;
+  if (!bx_utf8_to_wide(path, wide)) {
+    return -1;
+  }
+  return _wopen(wide.c_str(), flags, pmode);
+}
+
+static FILE *bx_vvfat_fopen(const char *path, const wchar_t *mode)
+{
+  std::wstring wide;
+  if (!bx_utf8_to_wide(path, wide)) {
+    return NULL;
+  }
+  return _wfopen(wide.c_str(), mode);
+}
+
+static int bx_vvfat_unlink(const char *path)
+{
+  std::wstring wide;
+  if (!bx_utf8_to_wide(path, wide)) {
+    return -1;
+  }
+  return _wunlink(wide.c_str());
+}
+
+static int bx_vvfat_access(const char *path, int mode)
+{
+  std::wstring wide;
+  if (!bx_utf8_to_wide(path, wide)) {
+    return -1;
+  }
+  return _waccess(wide.c_str(), mode);
+}
+
+static int bx_vvfat_rename(const char *oldpath, const char *newpath)
+{
+  std::wstring oldwide, newwide;
+  if (!bx_utf8_to_wide(oldpath, oldwide) || !bx_utf8_to_wide(newpath, newwide)) {
+    return -1;
+  }
+  return _wrename(oldwide.c_str(), newwide.c_str());
+}
+
+static HANDLE bx_vvfat_create_file_write(const char *path)
+{
+  std::wstring wide;
+  if (!bx_utf8_to_wide(path, wide)) {
+    return INVALID_HANDLE_VALUE;
+  }
+  return CreateFileW(wide.c_str(), GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+                     FILE_ATTRIBUTE_NORMAL, NULL);
+}
+
+static int bx_vvfat_mkstemp(char *tpl)
+{
+  std::wstring wide_template;
+  if (!bx_utf8_to_wide(tpl, wide_template) || wide_template.length() < 6) {
+    return -1;
+  }
+  size_t suffix = wide_template.length() - 6;
+  if (wide_template.compare(suffix, 6, L"XXXXXX") != 0) {
+    return -1;
+  }
+
+  DWORD seed = GetTickCount();
+  for (unsigned attempt = 0; attempt < 0x100000; attempt++) {
+    wchar_t digits[7];
+    _snwprintf_s(digits, _countof(digits), _TRUNCATE, L"%06x",
+                 (unsigned)((seed + attempt) & 0x00ffffff));
+    std::wstring candidate = wide_template;
+    candidate.replace(suffix, 6, digits);
+    int fd = _wopen(candidate.c_str(), O_RDWR | O_CREAT | O_EXCL
+#ifdef O_BINARY
+                    | O_BINARY
+#endif
+                    , 0600);
+    if (fd >= 0) {
+      std::string utf8;
+      if (bx_wide_to_utf8(candidate.c_str(), utf8) && utf8.length() <= strlen(tpl)) {
+        strcpy_s(tpl, strlen(tpl) + 1, utf8.c_str());
+      }
+      return fd;
+    }
+  }
+  return -1;
+}
+#else
+#define bx_vvfat_open(path, flags, pmode) ::open(path, flags, pmode)
+#define bx_vvfat_fopen(path, mode) fopen(path, mode)
+#define bx_vvfat_unlink(path) unlink(path)
+#define bx_vvfat_access(path, mode) access(path, mode)
+#define bx_vvfat_rename(oldpath, newpath) rename(oldpath, newpath)
+#define bx_vvfat_create_file_write(path) CreateFile(path, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL)
+#define bx_vvfat_mkstemp(tpl) mkstemp(tpl)
+#endif
+
 // portable mkdir / rmdir
 static int bx_mkdir(const char *path)
 {
 #ifndef WIN32
   return mkdir(path, 0755);
+#elif defined(BX_UWP_CORE_LIBRARY)
+  std::wstring wide;
+  if (!bx_utf8_to_wide(path, wide)) {
+    return -1;
+  }
+  return (CreateDirectoryW(wide.c_str(), NULL) != 0) ? 0 : -1;
 #else
   return (CreateDirectory(path, NULL) != 0) ? 0 : -1;
 #endif
@@ -101,6 +240,12 @@ static int bx_rmdir(const char *path)
 {
 #ifndef WIN32
   return rmdir(path);
+#elif defined(BX_UWP_CORE_LIBRARY)
+  std::wstring wide;
+  if (!bx_utf8_to_wide(path, wide)) {
+    return -1;
+  }
+  return (RemoveDirectoryW(wide.c_str()) != 0) ? 0 : -1;
 #else
   return (RemoveDirectory(path) != 0) ? 0 : -1;
 #endif
@@ -787,14 +932,29 @@ int vvfat_image_t::read_directory(int mapping_index)
   }
   closedir(dir);
 #else
+#if defined(BX_UWP_CORE_LIBRARY)
+  WIN32_FIND_DATAW finddataw;
+  std::wstring filterw;
+  std::string filenameUtf8;
+  if (!bx_utf8_to_wide(dirname, filterw)) {
+    mapping->end = mapping->begin;
+    return -1;
+  }
+  if (!filterw.empty() && filterw.back() != L'\\' && filterw.back() != L'/') {
+    filterw += L"\\";
+  }
+  filterw += L"*.*";
+#else
   WIN32_FIND_DATA finddata;
   char filter[MAX_PATH];
-#if defined(BX_UWP_CORE_LIBRARY)
-  sprintf_s(filter, sizeof(filter), "%s\\*.*", dirname);
-#else
   wsprintf(filter, "%s\\*.*", dirname);
 #endif
-  HANDLE hFind = FindFirstFile(filter, &finddata);
+  HANDLE hFind =
+#if defined(BX_UWP_CORE_LIBRARY)
+    FindFirstFileW(filterw.c_str(), &finddataw);
+#else
+    FindFirstFile(filter, &finddata);
+#endif
   int i;
 
   assert(mapping->mode & MODE_DIRECTORY);
@@ -815,44 +975,62 @@ int vvfat_image_t::read_directory(int mapping_index)
 
   // actually read the directory, and allocate the mappings
   do {
+#if defined(BX_UWP_CORE_LIBRARY)
+    if (!bx_wide_to_utf8(finddataw.cFileName, filenameUtf8)) {
+      continue;
+    }
+    const char *findFileName = filenameUtf8.c_str();
+    DWORD findFileAttributes = finddataw.dwFileAttributes;
+    DWORD findFileSizeLow = finddataw.nFileSizeLow;
+    FILETIME findCreationTime = finddataw.ftCreationTime;
+    FILETIME findLastAccessTime = finddataw.ftLastAccessTime;
+    FILETIME findLastWriteTime = finddataw.ftLastWriteTime;
+#else
+    const char *findFileName = finddata.cFileName;
+    DWORD findFileAttributes = finddata.dwFileAttributes;
+    DWORD findFileSizeLow = finddata.nFileSizeLow;
+    FILETIME findCreationTime = finddata.ftCreationTime;
+    FILETIME findLastAccessTime = finddata.ftLastAccessTime;
+    FILETIME findLastWriteTime = finddata.ftLastWriteTime;
+#endif
     if ((first_cluster == 0) && (directory.next >= (Bit16u)(root_entries - 1))) {
       BX_ERROR(("Too many entries in root directory, using only %d", count));
       FindClose(hFind);
       return -2;
     }
-    unsigned int length = lstrlen(dirname) + 2 + lstrlen(finddata.cFileName);
+    unsigned int length = (unsigned int)(strlen(dirname) + 2 + strlen(findFileName));
     char* buffer;
-    bool is_dot = !lstrcmp(finddata.cFileName, ".");
-    bool is_dotdot = !lstrcmp(finddata.cFileName, "..");
+    bool is_dot = !strcmp(findFileName, ".");
+    bool is_dotdot = !strcmp(findFileName, "..");
     if ((first_cluster == first_cluster_of_root_dir) && (is_dotdot || is_dot))
       continue;
-    bool is_mbr_file = !lstrcmp(finddata.cFileName, VVFAT_MBR);
-    bool is_boot_file = !lstrcmp(finddata.cFileName, VVFAT_BOOT);
-    bool is_attr_file = !lstrcmp(finddata.cFileName, VVFAT_ATTR);
+    bool is_mbr_file = !strcmp(findFileName, VVFAT_MBR);
+    bool is_boot_file = !strcmp(findFileName, VVFAT_BOOT);
+    bool is_attr_file = !strcmp(findFileName, VVFAT_ATTR);
     if (first_cluster == first_cluster_of_root_dir) {
-      if (is_attr_file || ((is_mbr_file || is_boot_file) && (finddata.nFileSizeLow == 512)))
+      if (is_attr_file || ((is_mbr_file || is_boot_file) && (findFileSizeLow == 512)))
         continue;
     }
 
     buffer = (char*)malloc(length);
-    snprintf(buffer, length, "%s/%s", dirname, finddata.cFileName);
+    snprintf(buffer, length, "%s/%s", dirname, findFileName);
 
     count++;
     // create directory entry for this file
     if (!is_dot && !is_dotdot) {
-      direntry = create_short_and_long_name(i, finddata.cFileName, 0);
+      direntry = create_short_and_long_name(i, findFileName, 0);
     } else {
       direntry = (direntry_t*)array_get(&directory, is_dot ? i : i + 1);
     }
-    direntry->attributes = ((finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? 0x10 : 0x20);
+    direntry->attributes = ((findFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? 0x10 : 0x20);
     direntry->reserved[0] = direntry->reserved[1]=0;
     if ((fat_type != 32) || (first_cluster_of_parent != 2)) {
-      direntry->ctime = fat_datetime(finddata.ftCreationTime, 1);
-      direntry->cdate = fat_datetime(finddata.ftCreationTime, 0);
-      direntry->adate = fat_datetime(finddata.ftLastAccessTime, 0);
+      direntry->ctime = fat_datetime(findCreationTime, 1);
+      direntry->cdate = fat_datetime(findCreationTime, 0);
+      direntry->adate = fat_datetime(findLastAccessTime, 0);
       direntry->begin_hi = 0;
-      direntry->mtime = fat_datetime(finddata.ftLastWriteTime, 1);
-      direntry->mdate = fat_datetime(finddata.ftLastWriteTime, 0);
+      direntry->mtime = fat_datetime(findLastWriteTime, 1);
+      direntry->mdate = fat_datetime(findLastWriteTime, 0);
     }
     if (is_dotdot && ((fat_type != 32) || (first_cluster_of_parent != 2)))
       set_begin_of_direntry(direntry, first_cluster_of_parent);
@@ -860,26 +1038,26 @@ int vvfat_image_t::read_directory(int mapping_index)
       set_begin_of_direntry(direntry, first_cluster);
     else
       direntry->begin = 0; // do that later
-    if (finddata.nFileSizeLow > 0x7fffffff) {
+    if (findFileSizeLow > 0x7fffffff) {
       BX_ERROR(("File '%s' is larger than 2GB", buffer));
       free(buffer);
       FindClose(hFind);
       return -3;
     }
-    direntry->size = htod32((finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? 0:finddata.nFileSizeLow);
+    direntry->size = htod32((findFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? 0:findFileSizeLow);
 
     // create mapping for this file
-    if (!is_dot && !is_dotdot && ((finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || finddata.nFileSizeLow)) {
+    if (!is_dot && !is_dotdot && ((findFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || findFileSizeLow)) {
       current_mapping = (mapping_t*)array_get_next(&this->mapping);
       current_mapping->begin = 0;
-      current_mapping->end = finddata.nFileSizeLow;
+      current_mapping->end = findFileSizeLow;
       /*
        * we get the direntry of the most recent direntry, which
        * contains the short name and all the relevant information.
        */
       current_mapping->dir_index = directory.next-1;
       current_mapping->first_mapping_index = -1;
-      if (finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+      if (findFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
         current_mapping->mode = MODE_DIRECTORY;
         current_mapping->info.dir.parent_mapping_index =
           mapping_index;
@@ -888,11 +1066,17 @@ int vvfat_image_t::read_directory(int mapping_index)
         current_mapping->info.file.offset = 0;
       }
       current_mapping->path = buffer;
-      current_mapping->read_only = (finddata.dwFileAttributes & FILE_ATTRIBUTE_READONLY);
+      current_mapping->read_only = (findFileAttributes & FILE_ATTRIBUTE_READONLY);
     } else {
       free(buffer);
     }
-  } while (FindNextFile(hFind, &finddata));
+  } while (
+#if defined(BX_UWP_CORE_LIBRARY)
+    FindNextFileW(hFind, &finddataw)
+#else
+    FindNextFile(hFind, &finddata)
+#endif
+    );
   FindClose(hFind);
 #endif
 
@@ -1136,13 +1320,14 @@ int vvfat_image_t::init_directories(const char* dirname)
 
 bool vvfat_image_t::read_sector_from_file(const char *path, Bit8u *buffer, Bit32u sector)
 {
-  int fd = ::open(path, O_RDONLY
+  int fd = bx_vvfat_open(path, O_RDONLY
 #ifdef O_BINARY
                   | O_BINARY
 #endif
 #ifdef O_LARGEFILE
                   | O_LARGEFILE
 #endif
+                  , 0
                   );
   if (fd < 0)
     return 0;
@@ -1169,7 +1354,13 @@ void vvfat_image_t::set_file_attributes(void)
   int i;
 
   sprintf(path, "%s/%s", vvfat_path, VVFAT_ATTR);
-  fd = fopen(path, "r");
+  fd = bx_vvfat_fopen(path,
+#if defined(WIN32) && defined(BX_UWP_CORE_LIBRARY)
+    L"r"
+#else
+    "r"
+#endif
+    );
   if (fd != NULL) {
     do {
       ret = fgets(line, sizeof(line) - 1, fd);
@@ -1417,7 +1608,7 @@ int vvfat_image_t::open(const char* dirname, int flags)
   redolog_temp = (char*)malloc(strlen(logname) + VOLATILE_REDOLOG_EXTENSION_LENGTH + 1);
   sprintf(redolog_temp, "%s%s", logname, VOLATILE_REDOLOG_EXTENSION);
 
-  filedes = mkstemp(redolog_temp);
+  filedes = bx_vvfat_mkstemp(redolog_temp);
 
   if (filedes < 0) {
     if (read_only) {
@@ -1438,7 +1629,7 @@ int vvfat_image_t::open(const char* dirname, int flags)
 
 #if (!defined(WIN32)) && !BX_WITH_MACOS
   // on unix it is legal to delete an open file
-  unlink(redolog_temp);
+  bx_vvfat_unlink(redolog_temp);
 #endif
 
   vvfat_modified = 0;
@@ -1543,7 +1734,7 @@ bool vvfat_image_t::write_file(const char *path, direntry_t *entry, bool create)
   fsize = dtoh32(entry->size);
   fstart = dtoh16(entry->begin) | (dtoh16(entry->begin_hi) << 16);
   if (create) {
-    fd = ::open(path, O_CREAT | O_RDWR | O_TRUNC
+    fd = bx_vvfat_open(path, O_CREAT | O_RDWR | O_TRUNC
 #ifdef O_BINARY
                 | O_BINARY
 #endif
@@ -1552,14 +1743,14 @@ bool vvfat_image_t::write_file(const char *path, direntry_t *entry, bool create)
 #endif
                 , 0644);
   } else {
-    fd = ::open(path, O_RDWR | O_TRUNC
+    fd = bx_vvfat_open(path, O_RDWR | O_TRUNC
 #ifdef O_BINARY
                 | O_BINARY
 #endif
 #ifdef O_LARGEFILE
                 | O_LARGEFILE
 #endif
-                );
+                , 0);
   }
   if (fd < 0)
     return 0;
@@ -1605,7 +1796,7 @@ bool vvfat_image_t::write_file(const char *path, direntry_t *entry, bool create)
   }
   utime(path, &ut);
 #else
-  hFile = CreateFile(path, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  hFile = bx_vvfat_create_file_write(path);
   if (hFile != INVALID_HANDLE_VALUE) {
     memset(&st, 0, sizeof(st));
     st.wYear = (entry->mdate >> 9) + 1980;
@@ -1700,7 +1891,7 @@ void vvfat_image_t::parse_directory(const char *path, Bit32u start_cluster)
           bx_mkdir(full_path);
           parse_directory(full_path, fstart);
         } else {
-          if (access(full_path, F_OK) == 0) {
+          if (bx_vvfat_access(full_path, F_OK) == 0) {
             mapping = find_mapping_for_path(full_path);
             if (mapping != NULL) {
               mapping->mode &= ~MODE_DELETED;
@@ -1725,7 +1916,7 @@ void vvfat_image_t::parse_directory(const char *path, Bit32u start_cluster)
           }
         } else {
           if ((newentry->cdate == entry->cdate) && (newentry->ctime == entry->ctime)) {
-            rename(mapping->path, full_path);
+            bx_vvfat_rename(mapping->path, full_path);
             if (newentry->attributes == 0x10) {
               parse_directory(full_path, fstart);
               mapping->mode &= ~MODE_DELETED;
@@ -1741,7 +1932,7 @@ void vvfat_image_t::parse_directory(const char *path, Bit32u start_cluster)
               bx_mkdir(full_path);
               parse_directory(full_path, fstart);
             } else {
-              if (access(full_path, F_OK) == 0) {
+              if (bx_vvfat_access(full_path, F_OK) == 0) {
                 mapping = find_mapping_for_path(full_path);
                 if (mapping != NULL) {
                   mapping->mode &= ~MODE_DELETED;
@@ -1778,7 +1969,13 @@ void vvfat_image_t::commit_changes(void)
     }
   }
   sprintf(path, "%s/%s", vvfat_path, VVFAT_ATTR);
-  vvfat_attr_fd = fopen(path, "w");
+  vvfat_attr_fd = bx_vvfat_fopen(path,
+#if defined(WIN32) && defined(BX_UWP_CORE_LIBRARY)
+    L"w"
+#else
+    "w"
+#endif
+    );
   // parse new directory tree and create / modify directories and files
   parse_directory(vvfat_path, (fat_type == 32) ? first_cluster_of_root_dir : 0);
   if (vvfat_attr_fd != NULL)
@@ -1791,7 +1988,7 @@ void vvfat_image_t::commit_changes(void)
       if (entry->attributes == 0x10) {
         bx_rmdir(mapping->path);
       } else {
-        unlink(mapping->path);
+        bx_vvfat_unlink(mapping->path);
       }
     }
   }
@@ -1823,7 +2020,7 @@ void vvfat_image_t::close(void)
 
 #if defined(WIN32) || BX_WITH_MACOS
   // on non-unix we have to wait till the file is closed to delete it
-  unlink(redolog_temp);
+  bx_vvfat_unlink(redolog_temp);
 #endif
   if (redolog_temp!=NULL)
     free(redolog_temp);
@@ -1918,13 +2115,14 @@ int vvfat_image_t::open_file(mapping_t* mapping)
   if (!current_mapping ||
     strcmp(current_mapping->path, mapping->path)) {
     /* open file */
-    int fd = ::open(mapping->path, O_RDONLY
+    int fd = bx_vvfat_open(mapping->path, O_RDONLY
 #ifdef O_BINARY
                     | O_BINARY
 #endif
 #ifdef O_LARGEFILE
                     | O_LARGEFILE
 #endif
+                    , 0
                     );
     if (fd < 0)
       return -1;

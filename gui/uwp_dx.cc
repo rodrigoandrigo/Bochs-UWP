@@ -32,6 +32,10 @@ public:
     fb_width(0),
     fb_height(0),
     framebuffer_dirty(false),
+    dirty_x0(0),
+    dirty_y0(0),
+    dirty_x1(0),
+    dirty_y1(0),
     mouse_absxy(false),
     mouse_buttons(0),
     ctrl_l_down(false),
@@ -81,6 +85,8 @@ private:
                       unsigned w, unsigned h);
   void update_indexed_rect(unsigned x, unsigned y, unsigned w, unsigned h);
   void update_all_indexed_pixels();
+  void mark_dirty_rect(unsigned x, unsigned y, unsigned w, unsigned h);
+  void mark_full_frame_dirty();
   void enqueue_event(const uwp_dx_event &event);
   Bit32u map_native_key(unsigned native_key, int pressed);
   void update_modifier_state(Bit32u bx_key, int pressed);
@@ -93,6 +99,10 @@ private:
   unsigned fb_width;
   unsigned fb_height;
   bool framebuffer_dirty;
+  unsigned dirty_x0;
+  unsigned dirty_y0;
+  unsigned dirty_x1;
+  unsigned dirty_y1;
   bool mouse_absxy;
   unsigned mouse_buttons;
   bool ctrl_l_down;
@@ -647,9 +657,40 @@ void bx_uwp_dx_gui_c::resize_framebuffer(unsigned x, unsigned y)
   } else {
     indexed_framebuffer.clear();
   }
-  framebuffer_dirty = true;
+  mark_full_frame_dirty();
 
   bx_uwp_dx_host_configure(host_xres, host_yres, host_xres * 4, 32);
+}
+
+void bx_uwp_dx_gui_c::mark_dirty_rect(unsigned x, unsigned y, unsigned w, unsigned h)
+{
+  if (framebuffer.empty() || x >= fb_width || y >= fb_height || w == 0 || h == 0) {
+    return;
+  }
+  if (x + w > fb_width) {
+    w = fb_width - x;
+  }
+  if (y + h > fb_height) {
+    h = fb_height - y;
+  }
+
+  if (!framebuffer_dirty) {
+    dirty_x0 = x;
+    dirty_y0 = y;
+    dirty_x1 = x + w;
+    dirty_y1 = y + h;
+  } else {
+    dirty_x0 = (std::min)(dirty_x0, x);
+    dirty_y0 = (std::min)(dirty_y0, y);
+    dirty_x1 = (std::max)(dirty_x1, x + w);
+    dirty_y1 = (std::max)(dirty_y1, y + h);
+  }
+  framebuffer_dirty = true;
+}
+
+void bx_uwp_dx_gui_c::mark_full_frame_dirty()
+{
+  mark_dirty_rect(0, 0, fb_width, fb_height);
 }
 
 void bx_uwp_dx_gui_c::specific_init(int argc, char **argv, unsigned headerbar_y)
@@ -728,8 +769,11 @@ void bx_uwp_dx_gui_c::handle_events(void)
 void bx_uwp_dx_gui_c::flush(void)
 {
   if (framebuffer_dirty && !framebuffer.empty()) {
-    bx_uwp_dx_host_update_rect(&framebuffer[0], fb_width * 4, 0, 0,
-                               fb_width, fb_height);
+    unsigned width = dirty_x1 > dirty_x0 ? dirty_x1 - dirty_x0 : fb_width;
+    unsigned height = dirty_y1 > dirty_y0 ? dirty_y1 - dirty_y0 : fb_height;
+    const uint32_t *src = &framebuffer[dirty_y0 * fb_width + dirty_x0];
+    bx_uwp_dx_host_update_rect(src, fb_width * 4, dirty_x0, dirty_y0,
+                               width, height);
     framebuffer_dirty = false;
   }
   bx_uwp_dx_host_present();
@@ -739,7 +783,7 @@ void bx_uwp_dx_gui_c::clear_screen(void)
 {
   if (!framebuffer.empty()) {
     std::fill(framebuffer.begin(), framebuffer.end(), 0xff000000);
-    framebuffer_dirty = true;
+    mark_full_frame_dirty();
   }
   bx_uwp_dx_host_clear(0xff000000);
 }
@@ -797,7 +841,7 @@ void bx_uwp_dx_gui_c::draw_char(Bit8u ch, Bit8u fc, Bit8u bc, Bit16u xc,
     }
   }
 
-  framebuffer_dirty = true;
+  mark_dirty_rect(xc, yc, fw, fh);
 }
 
 void bx_uwp_dx_gui_c::graphics_tile_update(Bit8u *tile, unsigned x, unsigned y)
@@ -814,7 +858,7 @@ void bx_uwp_dx_gui_c::graphics_tile_update(Bit8u *tile, unsigned x, unsigned y)
     copy_bgra_tile(tile, x, y, w, h);
   }
 
-  framebuffer_dirty = true;
+  mark_dirty_rect(x, y, w, h);
 }
 
 bx_svga_tileinfo_t *bx_uwp_dx_gui_c::graphics_tile_info(bx_svga_tileinfo_t *info)
@@ -882,7 +926,7 @@ void bx_uwp_dx_gui_c::graphics_tile_update_in_place(unsigned x, unsigned y,
   if (source_is_indexed()) {
     update_indexed_rect(x, y, w, h);
   }
-  framebuffer_dirty = true;
+  mark_dirty_rect(x, y, w, h);
 }
 
 bool bx_uwp_dx_gui_c::palette_change(Bit8u index, Bit8u red, Bit8u green,
@@ -893,7 +937,7 @@ bool bx_uwp_dx_gui_c::palette_change(Bit8u index, Bit8u red, Bit8u green,
   UNUSED(blue);
   if (source_is_indexed()) {
     update_all_indexed_pixels();
-    framebuffer_dirty = true;
+    mark_full_frame_dirty();
   }
   UNUSED(index);
   return 1;
