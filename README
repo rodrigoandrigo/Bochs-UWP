@@ -6,50 +6,6 @@ Ctrl+Alt+M Disables and enables the mouse and keyboard.
 
 ![](images/Image1.png)
 
-## Boot
-
-![](images/Image2.png)
-
-## Settings
-
-![](images/Image3.png)
-
-## bochsrc
-
-![](images/Image4.png)
-
-## HDD
-
-![](images/Image5.png)
-
-## Floppy
-
-![](images/Image6.png)
-
-## Start Floppy
-
-![](images/Image7.png)
-
-## Windows 1.01
-
-![](images/Image8.png)
-
-## Freedos
-
-![](images/Image9.png)
-
-## WInUI for UWP build
-
-![](images/Image10.png)
-
-## References
-
-https://github.com/bochs-emu/Bochs
-
-https://github.com/mediaexplorer74/x86Emulator
-
-
-
 Bochs - The cross platform IA-32 (x86) emulator
 Updated: Sun Feb 16 10:00:00 CET 2025
 Version: 3.0
