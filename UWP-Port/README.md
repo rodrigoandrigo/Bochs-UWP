@@ -1,3 +1,5 @@
+<img align="center" src="images/Image1.png">
+
 # UWP DirectX Bochs Port
 
 This document describes the current state of the Bochs UWP/XAML/DirectX port.
