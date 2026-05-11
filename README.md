@@ -4,43 +4,83 @@ The port is in UWP-Port
 
 ## Start
 
-<img align="center" src="images/Image1.png">
+<p align="center">
+  <a href="images/Image1.png">
+    <img src="images/Image1.png" alt="Bochs-UWP start screen" width="980" loading="lazy">
+  </a>
+</p>
 
 ## Boot
 
-<img align="center" src="images/Image2.png">
+<p align="center">
+  <a href="images/Image2.png">
+    <img src="images/Image2.png" alt="Bochs-UWP boot screen" width="980" loading="lazy">
+  </a>
+</p>
 
 ## Settings
 
-<img align="center" src="images/Image3.png">
+<p align="center">
+  <a href="images/Image3.png">
+    <img src="images/Image3.png" alt="Bochs-UWP settings screen" width="980" loading="lazy">
+  </a>
+</p>
 
 ## bochsrc
 
-<img align="center" src="images/Image4.png">
+<p align="center">
+  <a href="images/Image4.png">
+    <img src="images/Image4.png" alt="Bochs-UWP bochsrc configuration screen" width="980" loading="lazy">
+  </a>
+</p>
 
 ## HDD
 
-<img align="center" src="images/Image5.png">
+<p align="center">
+  <a href="images/Image5.png">
+    <img src="images/Image5.png" alt="Bochs-UWP hard disk configuration screen" width="980" loading="lazy">
+  </a>
+</p>
 
 ## Floppy
 
-<img align="center" src="images/Image6.png">
+<p align="center">
+  <a href="images/Image6.png">
+    <img src="images/Image6.png" alt="Bochs-UWP floppy configuration screen" width="980" loading="lazy">
+  </a>
+</p>
 
 ## Start Floppy
 
-<img align="center" src="images/Image7.png">
+<p align="center">
+  <a href="images/Image7.png">
+    <img src="images/Image7.png" alt="Bochs-UWP floppy boot screen" width="980" loading="lazy">
+  </a>
+</p>
 
 ## Windows 1.01
 
-<img align="center" src="images/Image8.png">
+<p align="center">
+  <a href="images/Image8.png">
+    <img src="images/Image8.png" alt="Windows 1.01 running in Bochs-UWP" width="980" loading="lazy">
+  </a>
+</p>
 
 ## Freedos
 
-<img align="center" src="images/Image9.png">
+<p align="center">
+  <a href="images/Image9.png">
+    <img src="images/Image9.png" alt="FreeDOS running in Bochs-UWP" width="980" loading="lazy">
+  </a>
+</p>
 
-## WInUI for UWP build
+## WinUI for UWP build
 
-<img align="center" src="images/Image10.png">
+<p align="center">
+  <a href="images/Image10.png">
+    <img src="images/Image10.png" alt="WinUI build screen for Bochs-UWP" width="980" loading="lazy">
+  </a>
+</p>
 
 ## References
 
