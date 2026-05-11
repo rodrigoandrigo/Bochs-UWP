@@ -15,22 +15,57 @@ UWP-specific code in the `UWP-Port` project.
   referenced with `UseUwpCoreRuntime=true`, which defines
   `BX_UWP_CORE_LIBRARY=1` and `BX_WITH_UWP_DX=1`.
 
-Validated build:
+## Build From CMD
 
-```powershell
-& 'C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe' UWP-Port.vcxproj /p:Configuration=Debug /p:Platform=x64 /m /v:minimal
-```
-
-Release build from `cmd.exe`:
+All commands below are intended for `cmd.exe`. Update `REPO` if the repository
+is checked out somewhere else.
 
 ```cmd
-cd /d C:\bochs\UWP-Port
-"C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" UWP-Port.vcxproj /p:Configuration=Release /p:Platform=x64 /m /v:minimal
+set "REPO=C:\Users\X4O1Z\Documents\GitHub\Bochs-UWP"
+set "MSBUILD=C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe"
+cd /d "%REPO%\UWP-Port"
 ```
 
-The Debug x64 package is generated in `UWP-Port\AppPackages` or in
-`UWP-Port\x64\Debug\UWP-Port`, depending on the packaging mode produced by
-MSBuild.
+Debug build:
+
+```cmd
+"%MSBUILD%" UWP-Port.vcxproj /p:Configuration=Debug /p:Platform=x64 /m /nr:false /v:minimal
+```
+
+Release build:
+
+```cmd
+"%MSBUILD%" UWP-Port.vcxproj /p:Configuration=Release /p:Platform=x64 /m /nr:false /v:minimal
+```
+
+MSIX bundle build:
+
+```cmd
+set "APPVER=1.0.0.2"
+set "CONFIG=Debug"
+"%MSBUILD%" UWP-Port.vcxproj /p:Configuration=%CONFIG% /p:Platform=x64 /p:AppxBundle=Always /p:AppxBundlePlatforms=x64 /m /nr:false /v:minimal
+dir /s /b "%REPO%\UWP-Port\AppPackages\UWP-Port\*.msixbundle"
+```
+
+To create a Release bundle, change `CONFIG` to `Release` and run the same
+MSBuild command. Before rebuilding an installable package after code changes,
+bump `Identity Version` in `Package.appxmanifest`; Windows can reject a package
+with the same identity and version but different contents.
+
+If the generated bundle is unsigned, sign it with the temporary key:
+
+```cmd
+set "SIGNTOOL=C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe"
+set "PFX=%REPO%\UWP-Port\UWP-Port_TemporaryKey.pfx"
+"%SIGNTOOL%" sign /fd SHA256 /f "%PFX%" "%REPO%\UWP-Port\AppPackages\UWP-Port\UWP-Port_%APPVER%_%CONFIG%_Test\UWP-Port_%APPVER%_x64_%CONFIG%.msixbundle"
+```
+
+Install the generated test package from `cmd.exe`:
+
+```cmd
+cd /d "%REPO%\UWP-Port\AppPackages\UWP-Port\UWP-Port_%APPVER%_%CONFIG%_Test"
+powershell.exe -ExecutionPolicy Bypass -File .\Install.ps1 -Force -SkipLoggingTelemetry
+```
 
 ## Boundaries
 
