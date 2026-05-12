@@ -6,6 +6,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <robuffer.h>
 #include <string>
@@ -22,12 +23,18 @@ namespace
 	struct UwpFileHandle
 	{
 		IRandomAccessStream^ stream;
+		IBuffer^ readBuffer;
+		IBuffer^ writeBuffer;
+		unsigned int readBufferCapacity;
+		unsigned int writeBufferCapacity;
 		unsigned long long position;
 		bool writable;
+		std::mutex ioMutex;
 	};
 
+	const unsigned int MaxTransferBytes = 4u * 1024u * 1024u;
 	std::mutex g_fileMutex;
-	std::map<int, UwpFileHandle> g_files;
+	std::map<int, std::shared_ptr<UwpFileHandle>> g_files;
 	int g_nextHandle = 1;
 
 	std::wstring Utf8ToWide(const char *value)
@@ -98,7 +105,10 @@ namespace
 	unsigned char *GetBufferBytes(IBuffer^ buffer)
 	{
 		ComPtr<IBufferByteAccess> byteAccess;
-		reinterpret_cast<IInspectable *>(buffer)->QueryInterface(IID_PPV_ARGS(&byteAccess));
+		if (FAILED(reinterpret_cast<IInspectable *>(buffer)->QueryInterface(IID_PPV_ARGS(&byteAccess))))
+		{
+			return nullptr;
+		}
 
 		unsigned char *bytes = nullptr;
 		byteAccess->Buffer(&bytes);
@@ -107,10 +117,36 @@ namespace
 
 	int StoreHandle(IRandomAccessStream^ stream, bool writable)
 	{
+		std::shared_ptr<UwpFileHandle> file = std::make_shared<UwpFileHandle>();
+		file->stream = stream;
+		file->readBuffer = nullptr;
+		file->writeBuffer = nullptr;
+		file->readBufferCapacity = 0;
+		file->writeBufferCapacity = 0;
+		file->position = 0;
+		file->writable = writable;
+
 		std::lock_guard<std::mutex> lock(g_fileMutex);
 		int handle = g_nextHandle++;
-		g_files[handle] = UwpFileHandle{ stream, 0, writable };
+		g_files[handle] = file;
 		return handle;
+	}
+
+	std::shared_ptr<UwpFileHandle> FindHandle(int handle)
+	{
+		std::lock_guard<std::mutex> lock(g_fileMutex);
+		auto it = g_files.find(handle);
+		return it == g_files.end() ? std::shared_ptr<UwpFileHandle>() : it->second;
+	}
+
+	IBuffer^ EnsureBuffer(IBuffer^ current, unsigned int& capacity, unsigned int bytesRequested)
+	{
+		if (current == nullptr || capacity < bytesRequested)
+		{
+			current = ref new Buffer(bytesRequested);
+			capacity = bytesRequested;
+		}
+		return current;
 	}
 
 	bool IsWriteRequested(unsigned flags)
@@ -168,11 +204,11 @@ extern "C" int bx_uwp_file_open(const char *uri, unsigned flags, unsigned long l
 		int handle = StoreHandle(stream, writable);
 		if (IsAppendRequested(flags))
 		{
-			std::lock_guard<std::mutex> lock(g_fileMutex);
-			auto it = g_files.find(handle);
-			if (it != g_files.end())
+			std::shared_ptr<UwpFileHandle> file = FindHandle(handle);
+			if (file)
 			{
-				it->second.position = stream->Size;
+				std::lock_guard<std::mutex> ioLock(file->ioMutex);
+				file->position = stream->Size;
 			}
 		}
 		return handle;
@@ -185,8 +221,7 @@ extern "C" int bx_uwp_file_open(const char *uri, unsigned flags, unsigned long l
 
 extern "C" void bx_uwp_file_close(int handle)
 {
-	IRandomAccessStream^ stream = nullptr;
-	bool writable = false;
+	std::shared_ptr<UwpFileHandle> file;
 	{
 		std::lock_guard<std::mutex> lock(g_fileMutex);
 		auto it = g_files.find(handle);
@@ -194,17 +229,20 @@ extern "C" void bx_uwp_file_close(int handle)
 		{
 			return;
 		}
-		stream = it->second.stream;
-		writable = it->second.writable;
+		file = it->second;
 		g_files.erase(it);
 	}
 
 	try
 	{
-		if (writable)
+		std::lock_guard<std::mutex> ioLock(file->ioMutex);
+		if (file->writable)
 		{
-			create_task(stream->FlushAsync()).get();
+			create_task(file->stream->FlushAsync()).get();
 		}
+		file->stream = nullptr;
+		file->readBuffer = nullptr;
+		file->writeBuffer = nullptr;
 	}
 	catch (...)
 	{
@@ -215,21 +253,21 @@ extern "C" long long bx_uwp_file_seek(int handle, long long offset, int whence)
 {
 	try
 	{
-		std::lock_guard<std::mutex> lock(g_fileMutex);
-		auto it = g_files.find(handle);
-		if (it == g_files.end())
+		std::shared_ptr<UwpFileHandle> file = FindHandle(handle);
+		if (!file)
 		{
 			return -1;
 		}
+		std::lock_guard<std::mutex> ioLock(file->ioMutex);
 
 		long long base = 0;
 		if (whence == SEEK_CUR)
 		{
-			base = static_cast<long long>(it->second.position);
+			base = static_cast<long long>(file->position);
 		}
 		else if (whence == SEEK_END)
 		{
-			base = static_cast<long long>(it->second.stream->Size);
+			base = static_cast<long long>(file->stream->Size);
 		}
 		else if (whence != SEEK_SET)
 		{
@@ -242,8 +280,8 @@ extern "C" long long bx_uwp_file_seek(int handle, long long offset, int whence)
 			return -1;
 		}
 
-		it->second.stream->Seek(static_cast<unsigned long long>(position));
-		it->second.position = static_cast<unsigned long long>(position);
+		file->stream->Seek(static_cast<unsigned long long>(position));
+		file->position = static_cast<unsigned long long>(position);
 		return position;
 	}
 	catch (...)
@@ -261,23 +299,30 @@ extern "C" intptr_t bx_uwp_file_read(int handle, void *buf, size_t count)
 
 	try
 	{
-		std::lock_guard<std::mutex> lock(g_fileMutex);
-		auto it = g_files.find(handle);
-		if (it == g_files.end())
+		std::shared_ptr<UwpFileHandle> file = FindHandle(handle);
+		if (!file)
 		{
 			return -1;
 		}
+		std::lock_guard<std::mutex> ioLock(file->ioMutex);
 
-		unsigned int bytesRequested = static_cast<unsigned int>((std::min)(count, static_cast<size_t>(UINT_MAX)));
-		IBuffer^ buffer = ref new Buffer(bytesRequested);
-		it->second.stream->Seek(it->second.position);
-		buffer = create_task(it->second.stream->ReadAsync(buffer, bytesRequested, InputStreamOptions::None)).get();
+		unsigned int bytesRequested = static_cast<unsigned int>(
+			(std::min)(count, static_cast<size_t>(MaxTransferBytes)));
+		file->readBuffer = EnsureBuffer(file->readBuffer, file->readBufferCapacity, bytesRequested);
+		file->stream->Seek(file->position);
+		IBuffer^ buffer = create_task(file->stream->ReadAsync(
+			file->readBuffer, bytesRequested, InputStreamOptions::None)).get();
 
 		unsigned int bytesRead = buffer->Length;
 		if (bytesRead > 0)
 		{
-			memcpy(buf, GetBufferBytes(buffer), bytesRead);
-			it->second.position += bytesRead;
+			unsigned char *bytes = GetBufferBytes(buffer);
+			if (bytes == nullptr)
+			{
+				return -1;
+			}
+			memcpy(buf, bytes, bytesRead);
+			file->position += bytesRead;
 		}
 		return static_cast<intptr_t>(bytesRead);
 	}
@@ -296,21 +341,28 @@ extern "C" intptr_t bx_uwp_file_write(int handle, const void *buf, size_t count)
 
 	try
 	{
-		std::lock_guard<std::mutex> lock(g_fileMutex);
-		auto it = g_files.find(handle);
-		if (it == g_files.end() || !it->second.writable)
+		std::shared_ptr<UwpFileHandle> file = FindHandle(handle);
+		if (!file || !file->writable)
 		{
 			return -1;
 		}
+		std::lock_guard<std::mutex> ioLock(file->ioMutex);
 
-		unsigned int bytesRequested = static_cast<unsigned int>((std::min)(count, static_cast<size_t>(UINT_MAX)));
-		IBuffer^ buffer = ref new Buffer(bytesRequested);
+		unsigned int bytesRequested = static_cast<unsigned int>(
+			(std::min)(count, static_cast<size_t>(MaxTransferBytes)));
+		file->writeBuffer = EnsureBuffer(file->writeBuffer, file->writeBufferCapacity, bytesRequested);
+		IBuffer^ buffer = file->writeBuffer;
 		buffer->Length = bytesRequested;
-		memcpy(GetBufferBytes(buffer), buf, bytesRequested);
+		unsigned char *bytes = GetBufferBytes(buffer);
+		if (bytes == nullptr)
+		{
+			return -1;
+		}
+		memcpy(bytes, buf, bytesRequested);
 
-		it->second.stream->Seek(it->second.position);
-		unsigned int bytesWritten = create_task(it->second.stream->WriteAsync(buffer)).get();
-		it->second.position += bytesWritten;
+		file->stream->Seek(file->position);
+		unsigned int bytesWritten = create_task(file->stream->WriteAsync(buffer)).get();
+		file->position += bytesWritten;
 		return static_cast<intptr_t>(bytesWritten);
 	}
 	catch (...)
@@ -323,13 +375,13 @@ extern "C" int bx_uwp_file_flush(int handle)
 {
 	try
 	{
-		std::lock_guard<std::mutex> lock(g_fileMutex);
-		auto it = g_files.find(handle);
-		if (it == g_files.end() || !it->second.writable)
+		std::shared_ptr<UwpFileHandle> file = FindHandle(handle);
+		if (!file || !file->writable)
 		{
 			return -1;
 		}
-		create_task(it->second.stream->FlushAsync()).get();
+		std::lock_guard<std::mutex> ioLock(file->ioMutex);
+		create_task(file->stream->FlushAsync()).get();
 		return 0;
 	}
 	catch (...)
@@ -342,16 +394,16 @@ extern "C" int bx_uwp_file_set_size(int handle, unsigned long long size)
 {
 	try
 	{
-		std::lock_guard<std::mutex> lock(g_fileMutex);
-		auto it = g_files.find(handle);
-		if (it == g_files.end() || !it->second.writable)
+		std::shared_ptr<UwpFileHandle> file = FindHandle(handle);
+		if (!file || !file->writable)
 		{
 			return -1;
 		}
-		it->second.stream->Size = size;
-		if (it->second.position > size)
+		std::lock_guard<std::mutex> ioLock(file->ioMutex);
+		file->stream->Size = size;
+		if (file->position > size)
 		{
-			it->second.position = size;
+			file->position = size;
 		}
 		return 0;
 	}
@@ -370,13 +422,13 @@ extern "C" int bx_uwp_file_get_size(int handle, unsigned long long *fsize)
 
 	try
 	{
-		std::lock_guard<std::mutex> lock(g_fileMutex);
-		auto it = g_files.find(handle);
-		if (it == g_files.end())
+		std::shared_ptr<UwpFileHandle> file = FindHandle(handle);
+		if (!file)
 		{
 			return -1;
 		}
-		*fsize = it->second.stream->Size;
+		std::lock_guard<std::mutex> ioLock(file->ioMutex);
+		*fsize = file->stream->Size;
 		return 0;
 	}
 	catch (...)

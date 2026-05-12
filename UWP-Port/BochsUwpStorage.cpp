@@ -187,6 +187,31 @@ namespace
 		return true;
 	}
 
+	static bool CanOpenFileWithWin32Apis(String^ filePath)
+	{
+		if (filePath == nullptr || filePath->Length() == 0)
+		{
+			return false;
+		}
+
+		CREATEFILE2_EXTENDED_PARAMETERS params = {};
+		params.dwSize = sizeof(params);
+		params.dwFileAttributes = FILE_ATTRIBUTE_NORMAL;
+		HANDLE handle = CreateFile2(
+			filePath->Data(),
+			GENERIC_READ,
+			FILE_SHARE_READ | FILE_SHARE_WRITE,
+			OPEN_EXISTING,
+			&params);
+		if (handle == INVALID_HANDLE_VALUE)
+		{
+			return false;
+		}
+
+		CloseHandle(handle);
+		return true;
+	}
+
 	static String^ BuildUwpDiskUri(String^ token, String^ name)
 	{
 		std::wstring uri = L"uwp://";
@@ -480,6 +505,7 @@ namespace
 			config += disk;
 			config += L"\", mode=";
 			config += mode;
+			config += L", translation=lba";
 			config += L"\n";
 		}
 
@@ -766,6 +792,11 @@ task<String^> UWP_Port::BochsUwpStorage::PickDiskImageToLocalFolderAsync()
 			catch (...)
 			{
 			}
+		}
+
+		if (CanOpenFileWithWin32Apis(pickedFile->Path))
+		{
+			return task_from_result(pickedFile->Path);
 		}
 
 		return CopyDiskImageToLocalFolderAsync(pickedFile);
