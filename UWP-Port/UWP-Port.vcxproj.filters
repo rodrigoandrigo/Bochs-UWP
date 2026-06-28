@@ -47,6 +47,9 @@
     <Content Include="..\bios\VGABIOS-lgpl-latest.bin">
       <Filter>Ativos</Filter>
     </Content>
+    <Content Include="..\bios\VGABIOS-lgpl-latest-cirrus.bin">
+      <Filter>Ativos</Filter>
+    </Content>
     <Filter Include="Assets">
       <UniqueIdentifier>{79dda478-5772-41e5-9299-cca9cd965e87}</UniqueIdentifier>
     </Filter>

@@ -34,11 +34,13 @@ namespace UWP_Port
 	{
 	public:
 		static BochsFrameSnapshot CopyFrame(bool forcePixels = false);
+		static bool CopyFrameInto(BochsFrameSnapshot& target, bool forcePixels = false);
 		static void SendNativeKey(unsigned nativeKey, bool pressed);
 		static void SendPointer(int x, int y, int z, unsigned buttons, bool absolute);
 		static void SendFocus(bool focused);
 		static void RequestMouseCapture(bool enabled);
 		static void RequestShutdown();
+		static void SetRuntimeMedia(Platform::String^ target, Platform::String^ path, bool inserted);
 		static bool IsMouseCaptured();
 		static bool IsMouseAbsolute();
 	};

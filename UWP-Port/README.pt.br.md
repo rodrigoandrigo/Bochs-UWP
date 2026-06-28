@@ -1,10 +1,11 @@
 <img align="center" src="images/Image1.png">
 
-# UWP DirectX Bochs Port
+# UWP DirectX / VNC Bochs Port
 
-Este documento descreve o estado atual do port UWP/XAML/DirectX do Bochs. O
-objetivo do projeto e manter o core nativo do Bochs e concentrar o codigo
-especifico de UWP no projeto `UWP-Port`.
+Este documento descreve o estado atual do port UWP/XAML do Bochs com saida
+local DirectX e saida opcional por servidor VNC/RFB. O objetivo do projeto e
+manter o core nativo do Bochs e concentrar o codigo especifico de UWP no
+projeto `UWP-Port`.
 
 ## Projetos
 
@@ -15,16 +16,18 @@ especifico de UWP no projeto `UWP-Port`.
   core executavel do Bochs sem expor o `main()` desktop.
 - `vs2019/*`: bibliotecas estaticas do Bochs usadas pelo core UWP. Os projetos
   sao referenciados com `UseUwpCoreRuntime=true`, o que define
-  `BX_UWP_CORE_LIBRARY=1` e `BX_WITH_UWP_DX=1`.
+  `BX_UWP_CORE_LIBRARY=1`, `BX_WITH_UWP_DX=1` e habilita o backend RFB no build
+  UWP.
 
 ## Build pelo CMD
 
-Todos os comandos abaixo devem ser executados no `cmd.exe`. Ajuste `REPO` se o
-repositorio estiver em outro local.
+Todos os comandos abaixo devem ser executados no `cmd.exe`. Ajuste `REPO`,
+`MSBUILD` e `SIGNTOOL` para os caminhos usados pelo seu checkout e pela
+instalacao do Visual Studio / Windows SDK.
 
 ```cmd
-set "REPO=C:\Users\X4O1Z\Documents\GitHub\Bochs-UWP"
-set "MSBUILD=C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe"
+set "REPO=<caminho-para-Bochs-UWP>"
+set "MSBUILD=<caminho-para-MSBuild.exe>"
 cd /d "%REPO%\UWP-Port"
 ```
 
@@ -43,7 +46,7 @@ Build Release:
 Build do MSIX bundle:
 
 ```cmd
-set "APPVER=1.0.0.2"
+set "APPVER=1.0.0.11"
 set "CONFIG=Debug"
 "%MSBUILD%" UWP-Port.vcxproj /p:Configuration=%CONFIG% /p:Platform=x64 /p:AppxBundle=Always /p:AppxBundlePlatforms=x64 /m /nr:false /v:minimal
 dir /s /b "%REPO%\UWP-Port\AppPackages\UWP-Port\*.msixbundle"
@@ -57,9 +60,15 @@ rejeitar um pacote com a mesma identidade e versao, mas conteudo diferente.
 Se o bundle gerado estiver sem assinatura, assine com a chave temporaria:
 
 ```cmd
-set "SIGNTOOL=C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe"
+set "SIGNTOOL=<caminho-para-signtool.exe>"
 set "PFX=%REPO%\UWP-Port\UWP-Port_TemporaryKey.pfx"
 "%SIGNTOOL%" sign /fd SHA256 /f "%PFX%" "%REPO%\UWP-Port\AppPackages\UWP-Port\UWP-Port_%APPVER%_%CONFIG%_Test\UWP-Port_%APPVER%_x64_%CONFIG%.msixbundle"
+```
+
+Verifique o bundle assinado:
+
+```cmd
+"%SIGNTOOL%" verify /pa /v "%REPO%\UWP-Port\AppPackages\UWP-Port\UWP-Port_%APPVER%_%CONFIG%_Test\UWP-Port_%APPVER%_x64_%CONFIG%.msixbundle"
 ```
 
 Instale o pacote de teste gerado a partir do `cmd.exe`:
@@ -72,6 +81,8 @@ powershell.exe -ExecutionPolicy Bypass -File .\Install.ps1 -Force -SkipLoggingTe
 ## Fronteiras
 
 - `gui/uwp_dx.cc` implementa o backend `bx_gui_c` do Bochs.
+- `gui/rfb.cc` implementa o backend VNC/RFB do Bochs usado quando a UI seleciona
+  `VNC/RFB server`.
 - `gui/uwp_dx_bridge.h` define a ABI C entre o core Bochs e o host UWP.
 - `UWP-Port/BochsUwpBridge.*` guarda framebuffer, eventos de teclado/mouse,
   foco, estado de captura de mouse e pedido de shutdown.
@@ -91,8 +102,13 @@ powershell.exe -ExecutionPolicy Bypass -File .\Install.ps1 -Force -SkipLoggingTe
 
 ## Renderizacao
 
-O backend UWP mantem um framebuffer intermediario BGRA8 no lado CPU. O renderer
-UWP apresenta esse framebuffer como `DXGI_FORMAT_B8G8R8A8_UNORM`.
+A UI pode iniciar o Bochs com `display_library: uwp_dx` ou
+`display_library: rfb`.
+
+### Saida Local DirectX
+
+O backend DirectX UWP mantem um framebuffer intermediario BGRA8 no lado CPU. O
+renderer UWP apresenta esse framebuffer como `DXGI_FORMAT_B8G8R8A8_UNORM`.
 
 - Modos SVGA que escrevem pixels de 32 bits copiam tiles diretamente para BGRA8.
 - Modos graficos indexados mantem um shadow buffer de 8 bits e aplicam a paleta
@@ -105,10 +121,37 @@ UWP apresenta esse framebuffer como `DXGI_FORMAT_B8G8R8A8_UNORM`.
 - `BochsFrameRenderer` mapeia uma textura D3D dinamica, copia o frame e desenha
   um quad em tela cheia.
 
+### Saida VNC/RFB
+
+Quando `VNC/RFB server` e selecionado, a configuracao gerada usa o backend RFB
+nativo do Bochs:
+
+```text
+display_library: rfb, options="timeout=<segundos>,no_gui_console"
+```
+
+A tela UWP local nao renderiza o framebuffer do guest nesse modo. Em vez disso,
+ela mostra um overlay de status com:
+
+- endereco IPv4 local;
+- porta RFB selecionada/em escuta;
+- estado do servidor;
+- estado da conexao do cliente.
+
+O backend RFB usa a primeira porta livre na faixa Bochs `5900-5949`. A UI mostra
+`5900` enquanto o backend inicializa e depois atualiza para a porta real
+informada pelo core. O manifesto declara `internetClientServer` e
+`privateNetworkClientServer` para permitir conexao de clientes VNC em redes
+locais/privadas.
+
+Teclado e mouse remotos sao tratados pelo cliente VNC atraves do protocolo RFB.
+A janela UWP intencionalmente nao injeta eventos locais de teclado/mouse no
+guest enquanto a saida RFB esta ativa.
+
 ## Teclado e Mouse
 
-A entrada do UWP passa pela UI thread e e consumida pela thread de emulacao em
-`gui/uwp_dx.cc`.
+Para `DirectX local`, a entrada do UWP passa pela UI thread e e consumida pela
+thread de emulacao em `gui/uwp_dx.cc`.
 
 Teclado:
 
@@ -134,6 +177,12 @@ Mouse:
 - Os toggles de captura seguem o codigo do Bochs: combinacoes de teclado e
   botoes passam por `mouse_toggle_check()` / `toggle_mouse_enable()`.
 
+Para `VNC/RFB server`, teclado e mouse vem do cliente VNC conectado. O backend
+RFB habilita o mouse ao iniciar, traduz keysyms ASCII diretamente para teclas
+comuns e cai para o caminho de keymap quando configurado. O primeiro evento de
+ponteiro remoto inicializa a origem do movimento relativo para evitar um delta
+grande no inicio.
+
 ## Armazenamento e Bochsrc
 
 O arquivo de configuracao e gerado em
@@ -141,7 +190,7 @@ O arquivo de configuracao e gerado em
 
 O gerador atual inclui:
 
-- `display_library: uwp_dx`
+- `display_library: uwp_dx` ou `display_library: rfb`
 - memoria, CPU, BIOS e VGABIOS. A RAM do guest e limitada ao intervalo da UI
   (16 MB a 8192 MB), e a alocacao residente `host` do Bochs e limitada a
   512 MB com blocos de 1 MB, deixando o gerenciador de overflow
@@ -152,12 +201,15 @@ O gerador atual inclui:
 - `pci: enabled=1, chipset=i440fx`
 - `plugin_ctrl` para audio, rede e dispositivos opcionais
 - `sound`, `speaker`, `sb16`, `es1370`
-- `ne2k` via slirp quando rede esta ligada
-- `floppya` quando uma imagem de floppy e selecionada
-- `ata0` e `ata0-master` para HDD, com `mode=` inferido ou selecionado na UI
-- `ata0-slave` para ISO/CD-ROM
-- `ata1` e `ata1-master` para uma pasta viva opcional do host montada como
-  VVFAT somente leitura
+- `ne2k` ou `e1000` via slirp quando rede esta ligada
+- configuracao opcional de controlador USB e imagem USB
+- modo opcional de redirecionamento serial
+- porta paralela opcional
+- `floppya` e `floppyb` quando imagens de floppy sao selecionadas
+- `ata0` / `ata0-master` e `ata0-slave` opcional para imagens de HDD, com
+  `mode=` inferido ou selecionado na UI
+- dispositivos `ata1` para HDD/CD-ROM adicionais e, quando selecionada, uma
+  pasta viva opcional do host montada como VVFAT somente leitura
 - `boot` com ate tres dispositivos ordenados
 - `log: -`
 
@@ -239,7 +291,7 @@ Quando existe ISO/CD-ROM mas nao existe HDD, o gerador monta a unidade optica em
 `ata0-master`. Quando HDD e ISO estao presentes juntos, o HDD fica em
 `ata0-master` e a ISO em `ata0-slave`.
 
-## PCI e i440FX
+## PCI e Chipsets
 
 O core UWP compila e usa a pilha PCI nativa do Bochs:
 
@@ -247,15 +299,21 @@ O core UWP compila e usa a pilha PCI nativa do Bochs:
 - `iodev/pci2isa.cc`: PIIX/PIIX3/PIIX4 PCI-to-ISA bridge.
 - `iodev/pci_ide.cc`: controlador PCI IDE PIIX.
 
-O `bochsrc` gerado seleciona explicitamente:
+O `bochsrc` gerado seleciona explicitamente o chipset configurado na UI:
 
 ```text
-pci: enabled=1, chipset=i440fx
+pci: enabled=1, chipset=i440fx, advopts="noioapic"
 ```
+
+As selecoes de chipset suportadas sao `i430fx`, `i440fx` e `i440bx`. A UI
+tambem expoe controles de ACPI, HPET e IOAPIC. ACPI pode ser desativado no
+`i440fx`; `i430fx` e tratado como legado e roda sem ACPI/HPET. IOAPIC e
+controlado pela opcao PCI avancada `noioapic` adicionada no port UWP.
 
 Quando rede ou audio PCI estao ativos, o gerador tambem reserva slots:
 
-- `slotN=ne2k` para a placa NE2K PCI/slirp.
+- `slotN=ne2k` para a placa NE2K PCI.
+- `slotN=e1000` para a placa E1000 PCI.
 - `slotN=es1370` para audio ES1370 PCI.
 
 O PIIX3/PCI IDE e carregado pelo proprio fluxo de inicializacao do Bochs quando
@@ -293,14 +351,43 @@ e a emulacao continua.
 
 ## Rede
 
-O toggle de rede gera `plugin_ctrl: ne2k=1` e:
+O seletor de rede pode gerar rede PCI NE2K ou E1000 via backends slirp, UDP
+socket ou vnet. Para NE2K ele
+gera `plugin_ctrl: ne2k=1` e:
 
 ```text
 ne2k: ioaddr=0x300, irq=10, mac=52:54:00:12:34:56, ethmod=slirp, script=""
 ```
 
+Para E1000, o gerador reserva um slot PCI E1000 e emite a configuracao de rede
+Bochs correspondente com o `ethmod` selecionado.
+
+O modo socket usa a porta UDP base configurada como `ethdev`; o Bochs recebe
+nessa porta e envia para a proxima, seguindo o backend socket upstream. O modo
+vnet usa a pasta local do app como raiz virtual de FTP/TFTP e expoe os servicos
+da rede virtual isolada do Bochs.
+
 O app linka `ws2_32.lib`, e o core UWP usa os projetos de rede existentes com o
-modo slirp ja integrado ao build.
+modos slirp, socket e vnet integrados ao build.
+
+## Perfis, Video e Midia em Tempo de Execucao
+
+A UI inclui perfis de maquina que preenchem combinacoes conservadoras de CPU,
+memoria, saida de video, som, rede e dispositivos. Depois de selecionar um
+perfil, qualquer ajuste manual marca o perfil como customizado.
+
+As opcoes avancadas de video incluem:
+
+- selecao de saida: `DirectX local` ou `VNC/RFB server`;
+- selecao de extensao VGA, incluindo VBE e Cirrus quando suportado pelo VGABIOS
+  empacotado;
+- selecao de memoria VBE;
+- frequencia de atualizacao e modo realtime;
+- selecao de BIOS/VGABIOS customizados.
+
+O gerenciamento de midia em tempo de execucao fica disponivel com o emulador
+rodando para floppy A, floppy B e CD-ROM. Pedidos de inserir/ejetar sao
+encaminhados pela ponte nativa de runtime media quando o backend ativo suporta.
 
 ## Ciclo de Vida, Save State e Diagnostico
 
@@ -349,6 +436,10 @@ boot order, save-state atual, som e rede.
 - Entrada de audio depende da permissao de microfone do Windows e do dispositivo
   de captura padrao. Se o Windows negar permissao, o guest recebe silencio.
 - MIDI depende do sintetizador MIDI UWP disponivel no sistema.
+- A saida VNC/RFB e remota. A superficie UWP mostra status de conexao, mas a
+  entrada do guest deve ser enviada pelo cliente VNC.
+- O RFB expoe atualmente o modo nativo sem autenticacao do Bochs; nao exponha a
+  porta em redes nao confiaveis.
 - A UI ainda e C++/CX/XAML no estilo template DirectX; as fronteiras nativas
   (`BochsUwpBridge`, renderer e runtime) permitem migracao futura para
   C++/WinRT sem mudar o backend `uwp_dx`.

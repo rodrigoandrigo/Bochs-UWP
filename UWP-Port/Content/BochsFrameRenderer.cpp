@@ -144,6 +144,7 @@ void BochsFrameRenderer::ReleaseDeviceDependentResources()
 	m_textureHeight = 0;
 	m_sourceWidth = 0;
 	m_sourceHeight = 0;
+	m_frameSnapshot = BochsFrameSnapshot{};
 	m_scaledPixels.clear();
 }
 
@@ -355,24 +356,24 @@ bool BochsFrameRenderer::Render()
 		return true;
 	}
 
-	BochsFrameSnapshot frame = BochsUwpBridge::CopyFrame(m_frameTexture == nullptr);
-	if (!frame.valid)
+	BochsUwpBridge::CopyFrameInto(m_frameSnapshot, m_frameTexture == nullptr);
+	if (!m_frameSnapshot.valid)
 	{
 		return true;
 	}
-	if (frame.pixels.empty() &&
-		(m_frameTexture == nullptr || m_sourceWidth != frame.width || m_sourceHeight != frame.height))
+	if (m_frameSnapshot.pixels.empty() &&
+		(m_frameTexture == nullptr || m_sourceWidth != m_frameSnapshot.width || m_sourceHeight != m_frameSnapshot.height))
 	{
-		frame = BochsUwpBridge::CopyFrame(true);
+		BochsUwpBridge::CopyFrameInto(m_frameSnapshot, true);
 	}
 
-	EnsureFrameTexture(frame);
-	if (frame.dirty)
+	EnsureFrameTexture(m_frameSnapshot);
+	if (m_frameSnapshot.dirty)
 	{
-		UploadFrameTexture(frame);
+		UploadFrameTexture(m_frameSnapshot);
 	}
 
-	BochsFrameConstants constants = BuildConstants(frame);
+	BochsFrameConstants constants = BuildConstants(m_frameSnapshot);
 	context->UpdateSubresource1(
 		m_constantBuffer.Get(),
 		0,

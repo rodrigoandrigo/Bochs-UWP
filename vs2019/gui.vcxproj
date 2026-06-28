@@ -235,9 +235,7 @@
     <ClCompile Include="..\gui\keymap.cc" />
     <ClCompile Include="..\gui\nogui.cc" />
     <ClCompile Include="..\gui\paramtree.cc" />
-    <ClCompile Include="..\gui\rfb.cc">
-      <ExcludedFromBuild Condition="'$(UseUwpCoreRuntime)'=='true'">true</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="..\gui\rfb.cc" />
     <ClCompile Include="..\gui\scrollwin.cc">
       <ExcludedFromBuild Condition="'$(UseUwpCoreRuntime)'=='true'">true</ExcludedFromBuild>
     </ClCompile>

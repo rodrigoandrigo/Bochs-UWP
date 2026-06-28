@@ -81,6 +81,12 @@ IMPLEMENT_GUI_PLUGIN_CODE(rfb)
 #include <winsock2.h>
 #include <process.h>
 #define BX_RFB_WIN32
+static void rfbCloseSocket(SOCKET s)
+{
+  if (s != INVALID_SOCKET) {
+    closesocket(s);
+  }
+}
 
 #else
 
@@ -98,6 +104,12 @@ typedef int SOCKET;
 #ifndef INVALID_SOCKET
 #define INVALID_SOCKET -1
 #endif
+static void rfbCloseSocket(SOCKET s)
+{
+  if (s != INVALID_SOCKET) {
+    close(s);
+  }
+}
 
 #endif
 
@@ -143,8 +155,8 @@ static struct _rfbUpdateRegion {
     bool updated;
 } rfbUpdateRegion;
 
-#define BX_RFB_MAX_XDIM 1280
-#define BX_RFB_MAX_YDIM 1024
+#define BX_RFB_MAX_XDIM 4096
+#define BX_RFB_MAX_YDIM 4096
 #define BX_RFB_DEF_XDIM 720
 #define BX_RFB_DEF_YDIM 480
 
@@ -176,13 +188,30 @@ static SOCKET sGlobal;
 static Bit32u clientEncodingsCount = 0;
 static Bit32u *clientEncodings = NULL;
 
+#if defined(BX_UWP_CORE_LIBRARY)
+extern "C" int bx_uwp_rfb_get_port()
+{
+  return keep_alive ? (int)rfbPort : 0;
+}
+
+extern "C" int bx_uwp_rfb_is_server_running()
+{
+  return keep_alive ? 1 : 0;
+}
+
+extern "C" int bx_uwp_rfb_is_client_connected()
+{
+  return client_connected ? 1 : 0;
+}
+#endif
+
 #ifdef BX_RFB_WIN32
 bool StopWinsock();
 #endif
 void rfbStartThread();
 void HandleRfbClient(SOCKET sClient);
-int ReadExact(int sock, char *buf, int len);
-int WriteExact(int sock, char *buf, int len);
+int ReadExact(SOCKET sock, char *buf, int len);
+int WriteExact(SOCKET sock, const char *buf, int len);
 void DrawBitmap(int x, int y, int width, int height, char *bmap, char fg,
         char bg, bool update_client);
 void DrawChar(int x, int y, int width, int height, int fontx, int fonty,
@@ -194,7 +223,7 @@ void rfbSetUpdateRegion(unsigned x0, unsigned y0, unsigned w, unsigned h);
 void rfbAddUpdateRegion(unsigned x0, unsigned y0, unsigned w, unsigned h);
 void rfbSetStatusText(int element, const char *text, bool active, Bit8u color = 0);
 static Bit32u convertStringToRfbKey(const char *string);
-#if BX_SHOW_IPS && defined(WIN32)
+#if BX_SHOW_IPS && defined(WIN32) && !defined(BX_UWP_CORE_LIBRARY)
 DWORD WINAPI rfbShowIPSthread(LPVOID);
 #endif
 
@@ -272,7 +301,10 @@ void bx_rfb_gui_c::specific_init(int argc, char **argv, unsigned headerbar_y)
 
   keep_alive = 1;
   client_connected = 0;
-  desktop_resizable = 0;
+  desktop_resizable = 1;
+  if (!SIM->get_param_bool(BXPN_MOUSE_ENABLED)->get()) {
+    SIM->get_param_bool(BXPN_MOUSE_ENABLED)->set(1);
+  }
   rfbStartThread();
 
 #ifdef WIN32
@@ -304,7 +336,7 @@ void bx_rfb_gui_c::specific_init(int argc, char **argv, unsigned headerbar_y)
     }
   }
 
-#if BX_SHOW_IPS && defined(WIN32)
+#if BX_SHOW_IPS && defined(WIN32) && !defined(BX_UWP_CORE_LIBRARY)
   if (!rfbHideIPS) {
     DWORD threadID;
     CreateThread(NULL, 0, rfbShowIPSthread, NULL, 0, &threadID);
@@ -495,6 +527,10 @@ unsigned bx_rfb_gui_c::headerbar_bitmap(unsigned bmap_id, unsigned alignment, vo
   if ((bx_headerbar_entries + 1) > BX_MAX_HEADERBAR_ENTRIES) {
     return 0;
   }
+  if ((bmap_id >= rfbBitmapCount) || (rfbBitmaps[bmap_id].bmap == NULL)) {
+    BX_ERROR(("headerbar_bitmap(): invalid bitmap id %u", bmap_id));
+    return 0;
+  }
 
   hb_index = bx_headerbar_entries++;
   bx_headerbar_entry[hb_index].bmap_id = bmap_id;
@@ -521,6 +557,10 @@ void bx_rfb_gui_c::show_headerbar(void)
   memset(newBits, 0, (rfbWindowX * rfbHeaderbarY));
   DrawBitmap(0, 0, rfbWindowX, rfbHeaderbarY, newBits, headerbar_fg, headerbar_bg, 0);
   for (i = 0; i < bx_headerbar_entries; i++) {
+    if ((bx_headerbar_entry[i].bmap_id >= rfbBitmapCount) ||
+        (rfbBitmaps[bx_headerbar_entry[i].bmap_id].bmap == NULL)) {
+      continue;
+    }
     if (bx_headerbar_entry[i].alignment == BX_GRAVITY_LEFT) {
       xorigin = bx_headerbar_entry[i].xorigin;
     } else {
@@ -552,6 +592,15 @@ void bx_rfb_gui_c::replace_bitmap(unsigned hbar_id, unsigned bmap_id)
 {
   unsigned int xorigin;
 
+  if ((hbar_id >= bx_headerbar_entries) ||
+      (hbar_id >= BX_MAX_HEADERBAR_ENTRIES)) {
+    BX_ERROR(("replace_bitmap(): invalid headerbar id %u", hbar_id));
+    return;
+  }
+  if ((bmap_id >= rfbBitmapCount) || (rfbBitmaps[bmap_id].bmap == NULL)) {
+    BX_ERROR(("replace_bitmap(): invalid bitmap id %u", bmap_id));
+    return;
+  }
   if (bmap_id == bx_headerbar_entry[hbar_id].bmap_id)
     return;
   bx_headerbar_entry[hbar_id].bmap_id = bmap_id;
@@ -568,17 +617,23 @@ void bx_rfb_gui_c::exit(void)
 {
   unsigned int i;
   keep_alive = 0;
+  client_connected = 0;
+  rfbPort = 0;
 #ifdef BX_RFB_WIN32
   StopWinsock();
 #endif
   delete [] rfbScreen;
+  rfbScreen = NULL;
   for(i = 0; i < rfbBitmapCount; i++) {
-    free(rfbBitmaps[i].bmap);
+    delete [] rfbBitmaps[i].bmap;
+    rfbBitmaps[i].bmap = NULL;
   }
+  rfbBitmapCount = 0;
 
   // Clear supported encodings
   if (clientEncodings != NULL) {
     delete [] clientEncodings;
+    clientEncodings = NULL;
     clientEncodingsCount = 0;
   }
 
@@ -587,6 +642,7 @@ void bx_rfb_gui_c::exit(void)
 
 void bx_rfb_gui_c::mouse_enabled_changed_specific(bool val)
 {
+  UNUSED(val);
 }
 
 bx_svga_tileinfo_t *bx_rfb_gui_c::graphics_tile_info(bx_svga_tileinfo_t *info)
@@ -688,7 +744,7 @@ void bx_rfb_gui_c::rfbMouseMove(int x, int y, int z, int bmask)
   static int oldy = -1;
   int dx, dy;
 
-  if ((oldx == 1) && (oldy == -1)) {
+  if ((oldx == -1) && (oldy == -1)) {
     oldx = x;
     oldy = y;
     return;
@@ -853,6 +909,23 @@ static Bit32u rfb_ascii_to_key_event[0x5f] = {
   BX_KEY_GRAVE
 };
 
+static Bit32u rfbAsciiToKeyEvent(Bit32u key)
+{
+  if ((key >= XK_A) && (key <= XK_Z)) {
+    return BX_KEY_A + key - XK_A;
+  }
+  if ((key >= XK_a) && (key <= XK_z)) {
+    return BX_KEY_A + key - XK_a;
+  }
+  if ((key >= XK_0) && (key <= XK_9)) {
+    return BX_KEY_0 + key - XK_0;
+  }
+  if ((key >= XK_space) && (key <= XK_asciitilde)) {
+    return rfb_ascii_to_key_event[key - XK_space];
+  }
+  return BX_KEY_UNHANDLED;
+}
+
 void bx_rfb_gui_c::rfbKeyPressed(Bit32u key, int press_release)
 {
   Bit32u key_event;
@@ -866,7 +939,7 @@ void bx_rfb_gui_c::rfbKeyPressed(Bit32u key, int press_release)
   }
   if (!SIM->get_param_bool(BXPN_KBD_USEMAPPING)->get()) {
     if ((key >= XK_space) && (key <= XK_asciitilde)) {
-      key_event = rfb_ascii_to_key_event[key - XK_space];
+      key_event = rfbAsciiToKeyEvent(key);
     } else {
       switch (key) {
         case XK_KP_1:
@@ -1103,10 +1176,14 @@ void bx_rfb_gui_c::rfbKeyPressed(Bit32u key, int press_release)
   } else {
     BXKeyEntry *entry = bx_keymap.findHostKey(key);
     if (!entry) {
-      BX_ERROR(("rfbKeyPressed(): key %x unhandled!", (unsigned) key));
-      return;
+      key_event = rfbAsciiToKeyEvent(key);
+      if (key_event == BX_KEY_UNHANDLED) {
+        BX_ERROR(("rfbKeyPressed(): key %x unhandled!", (unsigned) key));
+        return;
+      }
+    } else {
+      key_event = entry->baseKey;
     }
-    key_event = entry->baseKey;
   }
 
   if (!press_release)
@@ -1133,8 +1210,8 @@ bool StopWinsock()
 
 BX_THREAD_FUNC(rfbServerThreadInit, indata)
 {
-    SOCKET             sServer;
-    SOCKET             sClient;
+    SOCKET             sServer = INVALID_SOCKET;
+    SOCKET             sClient = INVALID_SOCKET;
     struct sockaddr_in sai;
     unsigned int       sai_size;
     int port_ok = 0;
@@ -1189,14 +1266,19 @@ BX_THREAD_FUNC(rfbServerThreadInit, indata)
         sClient = accept(sServer, (struct sockaddr *)&sai, (socklen_t*)&sai_size);
         if(sClient != INVALID_SOCKET) {
             HandleRfbClient(sClient);
+            client_connected = 0;
             sGlobal = INVALID_SOCKET;
-            close(sClient);
+            rfbCloseSocket(sClient);
         } else {
-            close(sClient);
+            rfbCloseSocket(sClient);
         }
     }
 
 end_of_thread:
+  rfbCloseSocket(sServer);
+  rfbPort = 0;
+  keep_alive = 0;
+  client_connected = 0;
 #ifdef BX_RFB_WIN32
     StopWinsock();
 #endif
@@ -1411,11 +1493,12 @@ void HandleRfbClient(SOCKET sClient)
             bx_gui->toggle_mouse_enable();
           } else {
             bKeyboardInUse = 1;
-            if (rfbKeyboardEvents >= MAX_KEY_EVENTS) break;
-            rfbKeyboardEvent[rfbKeyboardEvents].type = KEYBOARD;
-            rfbKeyboardEvent[rfbKeyboardEvents].key  = ke.key;
-            rfbKeyboardEvent[rfbKeyboardEvents].down = ke.downFlag;
-            rfbKeyboardEvents++;
+            if (rfbKeyboardEvents < MAX_KEY_EVENTS) {
+              rfbKeyboardEvent[rfbKeyboardEvents].type = KEYBOARD;
+              rfbKeyboardEvent[rfbKeyboardEvents].key  = ke.key;
+              rfbKeyboardEvent[rfbKeyboardEvents].down = ke.downFlag;
+              rfbKeyboardEvents++;
+            }
             bKeyboardInUse = 0;
           }
           break;
@@ -1430,23 +1513,24 @@ void HandleRfbClient(SOCKET sClient)
             bx_gui->toggle_mouse_enable();
           } else {
             bKeyboardInUse = 1;
-            if (rfbKeyboardEvents >= MAX_KEY_EVENTS) break;
-            rfbKeyboardEvent[rfbKeyboardEvents].type = MOUSE;
-            rfbKeyboardEvent[rfbKeyboardEvents].x    = ntohs(pe.xPosition);
-            rfbKeyboardEvent[rfbKeyboardEvents].y    = ntohs(pe.yPosition);
-            rfbKeyboardEvent[rfbKeyboardEvents].z    = 0;
-            rfbKeyboardEvent[rfbKeyboardEvents].down = (pe.buttonMask & 0x01) |
-                                                       ((pe.buttonMask>>1) & 0x02) |
-                                                       ((pe.buttonMask<<1) & 0x04);
-            if ((pe.buttonMask & 0x18) != wheel_status) {
-              if (pe.buttonMask & 0x10) {
-                rfbKeyboardEvent[rfbKeyboardEvents].z = -1;
-              } else if (pe.buttonMask & 0x08) {
-                rfbKeyboardEvent[rfbKeyboardEvents].z = 1;
+            if (rfbKeyboardEvents < MAX_KEY_EVENTS) {
+              rfbKeyboardEvent[rfbKeyboardEvents].type = MOUSE;
+              rfbKeyboardEvent[rfbKeyboardEvents].x    = ntohs(pe.xPosition);
+              rfbKeyboardEvent[rfbKeyboardEvents].y    = ntohs(pe.yPosition);
+              rfbKeyboardEvent[rfbKeyboardEvents].z    = 0;
+              rfbKeyboardEvent[rfbKeyboardEvents].down = (pe.buttonMask & 0x01) |
+                                                         ((pe.buttonMask>>1) & 0x02) |
+                                                         ((pe.buttonMask<<1) & 0x04);
+              if ((pe.buttonMask & 0x18) != wheel_status) {
+                if (pe.buttonMask & 0x10) {
+                  rfbKeyboardEvent[rfbKeyboardEvents].z = -1;
+                } else if (pe.buttonMask & 0x08) {
+                  rfbKeyboardEvent[rfbKeyboardEvents].z = 1;
+                }
+                wheel_status = pe.buttonMask & 0x18;
               }
-              wheel_status = pe.buttonMask & 0x18;
+              rfbKeyboardEvents++;
             }
-            rfbKeyboardEvents++;
             bKeyboardInUse = 0;
           }
           break;
@@ -1467,7 +1551,7 @@ void HandleRfbClient(SOCKET sClient)
 * occurred (errno is set to ETIMEDOUT if it timed out).
 */
 
-int ReadExact(int sock, char *buf, int len)
+int ReadExact(SOCKET sock, char *buf, int len)
 {
     while (len > 0) {
       int n = recv(sock, buf, len, 0);
@@ -1487,7 +1571,7 @@ int ReadExact(int sock, char *buf, int len)
 * ETIMEDOUT if it timed out).
 */
 
-int WriteExact(int sock, char *buf, int len)
+int WriteExact(SOCKET sock, const char *buf, int len)
 {
     while (len > 0) {
       int n = send(sock, buf, len,0);
@@ -1695,7 +1779,7 @@ void rfbSetStatusText(int element, const char *text, bool active, Bit8u color)
   rfbAddUpdateRegion(xleft, rfbWindowY - rfbStatusbarY + 1, xsize, rfbStatusbarY - 2);
 }
 
-#if BX_SHOW_IPS && defined(WIN32)
+#if BX_SHOW_IPS && defined(WIN32) && !defined(BX_UWP_CORE_LIBRARY)
 VOID CALLBACK IPSTimerProc(HWND hWnd, UINT nMsg, UINT_PTR nIDEvent, DWORD dwTime)
 {
   if (keep_alive) {

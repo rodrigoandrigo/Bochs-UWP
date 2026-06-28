@@ -19,6 +19,9 @@ typedef void (*bx_uwp_dx_pointer_cb)(int x, int y, int z, unsigned buttons,
 typedef void (*bx_uwp_dx_focus_cb)(int focused);
 typedef void (*bx_uwp_dx_shutdown_cb)(void);
 typedef void (*bx_uwp_dx_mouse_capture_cb)(int enabled);
+typedef void (*bx_uwp_dx_runtime_media_cb)(const char *target,
+                                           const char *path,
+                                           int inserted);
 
 typedef struct bx_uwp_dx_sink_t {
   bx_uwp_dx_native_key_cb key_event;
@@ -26,6 +29,7 @@ typedef struct bx_uwp_dx_sink_t {
   bx_uwp_dx_focus_cb focus_event;
   bx_uwp_dx_shutdown_cb shutdown_event;
   bx_uwp_dx_mouse_capture_cb mouse_capture_event;
+  bx_uwp_dx_runtime_media_cb runtime_media_event;
 } bx_uwp_dx_sink_t;
 
 void bx_uwp_dx_host_set_sink(const bx_uwp_dx_sink_t *sink);

@@ -40,28 +40,28 @@ The port is in UWP-Port
     </td>
     <td align="center" width="25%">
       <a href="images/Image6.png">
-        <img src="images/Image6.png" alt="Bochs-UWP floppy configuration screen" width="210" loading="lazy"><br>
-        <sub>Floppy</sub>
+        <img src="images/Image6.png" alt="Bochs-UWP VNC/RFB server screen" width="210" loading="lazy"><br>
+        <sub>VNC/RFB server</sub>
       </a>
     </td>
     <td align="center" width="25%">
       <a href="images/Image7.png">
-        <img src="images/Image7.png" alt="Bochs-UWP floppy boot screen" width="210" loading="lazy"><br>
-        <sub>Start Floppy</sub>
+        <img src="images/Image7.png" alt="Bochs-UWP hard disk boot screen" width="210" loading="lazy"><br>
+        <sub>Start HDD</sub>
       </a>
     </td>
     <td align="center" width="25%">
       <a href="images/Image8.png">
-        <img src="images/Image8.png" alt="Windows 1.01 running in Bochs-UWP" width="210" loading="lazy"><br>
-        <sub>Windows 1.01</sub>
+        <img src="images/Image8.png" alt="Tiny Core Linux running in Bochs-UWP" width="210" loading="lazy"><br>
+        <sub>Tiny Core Linux</sub>
       </a>
     </td>
   </tr>
   <tr>
     <td align="center" width="25%">
       <a href="images/Image9.png">
-        <img src="images/Image9.png" alt="FreeDOS running in Bochs-UWP" width="210" loading="lazy"><br>
-        <sub>FreeDOS</sub>
+        <img src="images/Image9.png" alt="Debian 3 running in Bochs-UWP" width="210" loading="lazy"><br>
+        <sub>Debian 3</sub>
       </a>
     </td>
     <td align="center" width="25%">

@@ -207,6 +207,8 @@ void bx_devices_c::init(BX_MEM_C *newmem)
         } else {
           BX_ERROR(("Disabling AGP not supported by PCI chipset"));
         }
+      } else if (!strcmp(argv[i], "noioapic")) {
+        pci.advopts |= BX_PCI_ADVOPT_NOIOAPIC;
       } else {
         BX_ERROR(("Unknown advanced PCI option '%s'", argv[i]));
       }
@@ -245,7 +247,9 @@ void bx_devices_c::init(BX_MEM_C *newmem)
   PLUG_load_plugin(floppy, PLUGTYPE_CORE);
 
 #if BX_SUPPORT_APIC
-  PLUG_load_plugin(ioapic, PLUGTYPE_STANDARD);
+  if ((pci.advopts & BX_PCI_ADVOPT_NOIOAPIC) == 0) {
+    PLUG_load_plugin(ioapic, PLUGTYPE_STANDARD);
+  }
 #endif
   PLUG_load_plugin(keyboard, PLUGTYPE_STANDARD);
 #if BX_SUPPORT_BUSMOUSE

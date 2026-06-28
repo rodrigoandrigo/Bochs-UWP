@@ -379,10 +379,435 @@ namespace
 		});
 	}
 
+	static bool HasValue(String^ value)
+	{
+		return value != nullptr && value->Length() > 0;
+	}
+
+	static std::wstring StringValue(String^ value)
+	{
+		return HasValue(value) ? std::wstring(value->Data()) : std::wstring();
+	}
+
+	static bool TagEquals(String^ value, const wchar_t *tag)
+	{
+		return HasValue(value) && tag != nullptr && _wcsicmp(value->Data(), tag) == 0;
+	}
+
+	static int NormalizeNetworkSocketPort(int value)
+	{
+		if (value < 1024)
+		{
+			return 40000;
+		}
+		if (value > 65534)
+		{
+			return 65534;
+		}
+		return value;
+	}
+
+	static std::wstring NormalizeNetworkModel(String^ networkAdapter)
+	{
+		std::wstring adapter = HasValue(networkAdapter) ? ToLower(StringValue(networkAdapter)) : L"none";
+		if (adapter.find(L"e1000") != std::wstring::npos)
+		{
+			return L"e1000";
+		}
+		if (adapter.find(L"ne2k") != std::wstring::npos)
+		{
+			return L"ne2k";
+		}
+		return L"none";
+	}
+
+	static std::wstring NormalizeNetworkBackend(String^ networkAdapter)
+	{
+		std::wstring adapter = HasValue(networkAdapter) ? ToLower(StringValue(networkAdapter)) : L"none";
+		if (adapter.find(L"socket") != std::wstring::npos)
+		{
+			return L"socket";
+		}
+		if (adapter.find(L"vnet") != std::wstring::npos)
+		{
+			return L"vnet";
+		}
+		if (NormalizeNetworkModel(networkAdapter) != L"none")
+		{
+			return L"slirp";
+		}
+		return L"none";
+	}
+
+	static std::wstring NormalizePciChipset(String^ pciChipset)
+	{
+		std::wstring chipset = HasValue(pciChipset) ? ToLower(StringValue(pciChipset)) : L"i440fx";
+		if (chipset == L"i430fx" || chipset == L"i440fx" || chipset == L"i440bx")
+		{
+			return chipset;
+		}
+		return L"i440fx";
+	}
+
+	static void AppendPlugin(std::wstring& plugins, const wchar_t *plugin)
+	{
+		if (plugin == nullptr || plugin[0] == 0)
+		{
+			return;
+		}
+		if (!plugins.empty())
+		{
+			plugins += L", ";
+		}
+		plugins += plugin;
+		plugins += L"=1";
+	}
+
+	static void AppendAtaController(std::wstring& config, int controller)
+	{
+		static const wchar_t *resources[] =
+		{
+			L"ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14\n",
+			L"ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15\n",
+			L"ata2: enabled=1, ioaddr1=0x1e8, ioaddr2=0x3e0, irq=11\n",
+			L"ata3: enabled=1, ioaddr1=0x168, ioaddr2=0x360, irq=9\n"
+		};
+		if (controller >= 0 && controller < 4)
+		{
+			config += resources[controller];
+		}
+	}
+
+	static void AppendPciAdvancedOptions(
+		std::wstring& config,
+		const std::wstring& chipset,
+		bool acpiEnabled,
+		bool hpetEnabled,
+		bool ioApicEnabled)
+	{
+		std::vector<std::wstring> options;
+		if (!acpiEnabled && chipset == L"i440fx")
+		{
+			options.push_back(L"noacpi");
+		}
+		if (!hpetEnabled)
+		{
+			options.push_back(L"nohpet");
+		}
+		if (!ioApicEnabled)
+		{
+			options.push_back(L"noioapic");
+		}
+		if (options.empty())
+		{
+			return;
+		}
+
+		config += L", advopts=\"";
+		for (size_t i = 0; i < options.size(); ++i)
+		{
+			if (i > 0)
+			{
+				config += L",";
+			}
+			config += options[i];
+		}
+		config += L"\"";
+	}
+
+	static void AppendNetworkConfig(std::wstring& config, String^ networkAdapter, int networkSocketPort)
+	{
+		std::wstring model = NormalizeNetworkModel(networkAdapter);
+		if (model == L"none")
+		{
+			return;
+		}
+
+		std::wstring backend = NormalizeNetworkBackend(networkAdapter);
+		std::wstring ethdev;
+		if (backend == L"socket")
+		{
+			ethdev = std::to_wstring(NormalizeNetworkSocketPort(networkSocketPort));
+		}
+		else if (backend == L"vnet")
+		{
+			ethdev = ApplicationData::Current->LocalFolder->Path->Data();
+		}
+
+		if (model == L"ne2k")
+		{
+			config += L"ne2k: ioaddr=0x300, irq=10, mac=52:54:00:12:34:56, ethmod=";
+			config += backend;
+			if (!ethdev.empty())
+			{
+				config += L", ethdev=\"";
+				config += ethdev;
+				config += L"\"";
+			}
+			config += L", script=\"\"\n";
+			return;
+		}
+
+		config += L"e1000: enabled=1, mac=52:54:00:12:34:56, ethmod=";
+		config += backend;
+		if (!ethdev.empty())
+		{
+			config += L", ethdev=\"";
+			config += ethdev;
+			config += L"\"";
+		}
+		config += L", script=\"\"\n";
+	}
+
+	static std::wstring AtaDeviceName(int slot)
+	{
+		std::wstring name(L"ata");
+		name += std::to_wstring(slot / 2);
+		name += (slot % 2) == 0 ? L"-master" : L"-slave";
+		return name;
+	}
+
+	static void AppendAtaDisk(
+		std::wstring& config,
+		int slot,
+		String^ path,
+		String^ diskImageMode)
+	{
+		if (!HasValue(path) || slot < 0)
+		{
+			return;
+		}
+
+		config += AtaDeviceName(slot);
+		config += L": type=disk, path=\"";
+		config += path->Data();
+		config += L"\", mode=";
+		config += NormalizeDiskImageMode(path, diskImageMode);
+		config += L", translation=lba\n";
+	}
+
+	static void AppendAtaCdrom(std::wstring& config, int slot, String^ path)
+	{
+		if (!HasValue(path) || slot < 0)
+		{
+			return;
+		}
+
+		config += AtaDeviceName(slot);
+		config += L": type=cdrom, path=\"";
+		config += path->Data();
+		config += L"\", status=inserted\n";
+	}
+
+	static void AppendAtaVvfat(std::wstring& config, int slot, String^ sharedFolderPath)
+	{
+		if (!HasValue(sharedFolderPath) || slot < 0)
+		{
+			return;
+		}
+
+		std::wstring vvfatJournal(ApplicationData::Current->LocalFolder->Path->Data());
+		vvfatJournal += L"\\vvfat-readonly-redolog";
+		config += AtaDeviceName(slot);
+		config += L": type=disk, path=\"readonly:";
+		config += sharedFolderPath->Data();
+		config += L"\", mode=vvfat, journal=\"";
+		config += vvfatJournal;
+		config += L"\", translation=lba\n";
+	}
+
+	static int NextAtaSlot(int& nextSlot)
+	{
+		if (nextSlot >= 8)
+		{
+			return -1;
+		}
+		return nextSlot++;
+	}
+
+	static void AppendUsbConfig(
+		std::wstring& config,
+		String^ usbController,
+		String^ usbDevice,
+		String^ usbImagePath)
+	{
+		if (TagEquals(usbController, L"none"))
+		{
+			return;
+		}
+
+		std::wstring controller = HasValue(usbController) ? StringValue(usbController) : L"none";
+		std::wstring device = HasValue(usbDevice) ? StringValue(usbDevice) : L"none";
+		if (controller == L"none")
+		{
+			return;
+		}
+
+		config += L"usb_";
+		config += controller;
+		config += L": enabled=1";
+		if (controller == L"ehci")
+		{
+			config += L", companion=uhci";
+		}
+		if (controller == L"xhci")
+		{
+			config += L", n_ports=4";
+		}
+
+		if (device != L"none")
+		{
+			config += L", port1=";
+			config += device;
+			if (device == L"disk" || device == L"cdrom" || device == L"floppy")
+			{
+				if (HasValue(usbImagePath))
+				{
+					config += L", options1=\"path:";
+					config += usbImagePath->Data();
+					if (controller == L"xhci" && device == L"disk")
+					{
+						config += L", speed:super, proto:bbb";
+					}
+					else if (controller == L"ehci")
+					{
+						config += L", speed:high";
+					}
+					config += L"\"";
+				}
+			}
+			else if (device == L"tablet")
+			{
+				config += L", options1=\"speed:low\"";
+			}
+		}
+		config += L"\n";
+	}
+
+	static void AppendSerialConfig(std::wstring& config, String^ serialMode)
+	{
+		if (TagEquals(serialMode, L"null"))
+		{
+			config += L"com1: enabled=1, mode=null\n";
+			return;
+		}
+		if (TagEquals(serialMode, L"file"))
+		{
+			std::wstring serialPath(ApplicationData::Current->LocalFolder->Path->Data());
+			serialPath += L"\\com1.txt";
+			config += L"com1: enabled=1, mode=file, dev=\"";
+			config += serialPath;
+			config += L"\"\n";
+		}
+	}
+
+	static void AppendParallelConfig(std::wstring& config, bool parallelEnabled)
+	{
+		if (!parallelEnabled)
+		{
+			return;
+		}
+
+		std::wstring parallelPath(ApplicationData::Current->LocalFolder->Path->Data());
+		parallelPath += L"\\parport1.out";
+		config += L"parport1: enabled=1, file=\"";
+		config += parallelPath;
+		config += L"\"\n";
+	}
+
+	static int NormalizeVideoUpdateFreq(int value)
+	{
+		if (value < 0)
+		{
+			return 10;
+		}
+		if (value > 75)
+		{
+			return 75;
+		}
+		return value;
+	}
+
+	static int NormalizeVbeMemoryMb(int value)
+	{
+		switch (value)
+		{
+		case 4:
+		case 8:
+		case 16:
+		case 32:
+			return value;
+		default:
+			return 16;
+		}
+	}
+
+	static int NormalizeRfbTimeout(int value)
+	{
+		if (value < 0)
+		{
+			return 0;
+		}
+		if (value > 300)
+		{
+			return 300;
+		}
+		return value;
+	}
+
+	static bool UseRfbDisplay(String^ displayLibrary)
+	{
+		return TagEquals(displayLibrary, L"rfb");
+	}
+
+	static void AppendDisplayConfig(std::wstring& config, String^ displayLibrary, int rfbTimeout)
+	{
+		if (UseRfbDisplay(displayLibrary))
+		{
+			config += L"display_library: rfb, options=\"timeout=";
+			config += std::to_wstring(NormalizeRfbTimeout(rfbTimeout));
+			config += L",no_gui_console\"\n";
+			return;
+		}
+
+		config += L"display_library: uwp_dx\n";
+	}
+
+	static void AppendVideoConfig(
+		std::wstring& config,
+		String^ videoExtension,
+		int videoUpdateFreq,
+		bool videoRealtime,
+		int vbeMemoryMb)
+	{
+		std::wstring extension = HasValue(videoExtension) ? StringValue(videoExtension) : L"vbe";
+		if (extension != L"none" && extension != L"vbe" && extension != L"cirrus")
+		{
+			extension = L"vbe";
+		}
+
+		config += L"vga: extension=";
+		config += extension;
+		config += L", update_freq=";
+		config += std::to_wstring(NormalizeVideoUpdateFreq(videoUpdateFreq));
+		config += L", realtime=";
+		config += videoRealtime ? L"1" : L"0";
+		config += L", ddc=builtin";
+		if (extension == L"vbe")
+		{
+			config += L", vbe_memsize=";
+			config += std::to_wstring(NormalizeVbeMemoryMb(vbeMemoryMb));
+		}
+		config += L"\n";
+	}
+
 	static String^ DefaultBochsrcText(
 		String^ diskPath,
+		String^ disk2Path,
 		String^ floppyPath,
+		String^ floppyBPath,
 		String^ cdromPath,
+		String^ cdrom2Path,
 		String^ sharedFolderPath,
 		String^ bootTarget,
 		int memoryMb,
@@ -390,17 +815,38 @@ namespace
 		String^ biosPath,
 		String^ vgaBiosPath,
 		bool soundEnabled,
-		bool networkEnabled,
-		String^ diskImageMode)
+		String^ networkAdapter,
+		String^ diskImageMode,
+		String^ disk2ImageMode,
+		String^ usbController,
+		String^ usbDevice,
+		String^ usbImagePath,
+		String^ serialMode,
+		bool parallelEnabled,
+		String^ videoExtension,
+		int videoUpdateFreq,
+		bool videoRealtime,
+		int vbeMemoryMb,
+		String^ displayLibrary,
+		int rfbTimeout,
+		int networkSocketPort,
+		String^ pciChipset,
+		bool acpiEnabled,
+		bool hpetEnabled,
+		bool ioApicEnabled)
 	{
 		std::wstring assetsPath(Package::Current->InstalledLocation->Path->Data());
 		assetsPath += L"\\Assets\\";
 		std::wstring bios = (biosPath != nullptr && biosPath->Length() > 0)
 			? std::wstring(biosPath->Data())
 			: assetsPath + L"BIOS-bochs-latest";
+		String^ effectiveVideoExtension = UseRfbDisplay(displayLibrary)
+			? ref new String(L"none")
+			: videoExtension;
+		bool useCirrus = TagEquals(effectiveVideoExtension, L"cirrus");
 		std::wstring vgaBios = (vgaBiosPath != nullptr && vgaBiosPath->Length() > 0)
 			? std::wstring(vgaBiosPath->Data())
-			: assetsPath + L"VGABIOS-lgpl-latest.bin";
+			: assetsPath + (useCirrus ? L"VGABIOS-lgpl-latest-cirrus.bin" : L"VGABIOS-lgpl-latest.bin");
 		std::wstring boot = (bootTarget != nullptr && bootTarget->Length() > 0)
 			? std::wstring(bootTarget->Data())
 			: L"disk";
@@ -410,10 +856,21 @@ namespace
 			? std::wstring(cpuModel->Data())
 			: L"corei7_haswell_4770";
 		bool effectiveSoundEnabled = soundEnabled;
+		std::wstring networkModel = NormalizeNetworkModel(networkAdapter);
+		std::wstring chipset = NormalizePciChipset(pciChipset);
+		if (chipset == L"i430fx")
+		{
+			acpiEnabled = false;
+			hpetEnabled = false;
+		}
+		else if (chipset == L"i440bx")
+		{
+			acpiEnabled = true;
+		}
 
 		std::wstring config;
 		config += L"config_interface: textconfig\n";
-		config += L"display_library: uwp_dx\n";
+		AppendDisplayConfig(config, displayLibrary, rfbTimeout);
 		config += L"memory: guest=";
 		config += std::to_wstring(memory);
 		config += L", host=";
@@ -431,31 +888,72 @@ namespace
 		config += L"vgaromimage: file=\"";
 		config += vgaBios;
 		config += L"\"\n";
+		AppendVideoConfig(config, effectiveVideoExtension, videoUpdateFreq, videoRealtime, vbeMemoryMb);
 
 		int pciSlot = 1;
-		config += L"pci: enabled=1, chipset=i440fx";
-		if (networkEnabled)
+		config += L"pci: enabled=1, chipset=";
+		config += chipset;
+		if (useCirrus)
+		{
+			AppendPciSlot(config, pciSlot, L"cirrus");
+		}
+		if (networkModel == L"ne2k")
 		{
 			AppendPciSlot(config, pciSlot, L"ne2k");
+		}
+		else if (networkModel == L"e1000")
+		{
+			AppendPciSlot(config, pciSlot, L"e1000");
 		}
 		if (effectiveSoundEnabled)
 		{
 			AppendPciSlot(config, pciSlot, L"es1370");
 		}
+		if (HasValue(usbController) && !TagEquals(usbController, L"none"))
+		{
+			std::wstring usbSlot(L"usb_");
+			usbSlot += usbController->Data();
+			AppendPciSlot(config, pciSlot, usbSlot.c_str());
+		}
+		AppendPciAdvancedOptions(config, chipset, acpiEnabled, hpetEnabled, ioApicEnabled);
 		config += L"\n";
 
 		std::wstring plugins;
 		if (effectiveSoundEnabled)
 		{
-			plugins += L"speaker=1, sb16=1, es1370=1";
+			AppendPlugin(plugins, L"speaker");
+			AppendPlugin(plugins, L"sb16");
+			AppendPlugin(plugins, L"es1370");
 		}
-		if (networkEnabled)
+		if (useCirrus)
 		{
-			if (!plugins.empty())
+			AppendPlugin(plugins, L"svga_cirrus");
+		}
+		if (networkModel == L"ne2k")
+		{
+			AppendPlugin(plugins, L"ne2k");
+		}
+		else if (networkModel == L"e1000")
+		{
+			AppendPlugin(plugins, L"e1000");
+		}
+		if (HasValue(usbController) && !TagEquals(usbController, L"none"))
+		{
+			std::wstring usbPlugin(L"usb_");
+			usbPlugin += usbController->Data();
+			AppendPlugin(plugins, usbPlugin.c_str());
+			if (TagEquals(usbController, L"ehci"))
 			{
-				plugins += L", ";
+				AppendPlugin(plugins, L"usb_uhci");
 			}
-			plugins += L"ne2k=1";
+		}
+		if (HasValue(serialMode) && !TagEquals(serialMode, L"disabled"))
+		{
+			AppendPlugin(plugins, L"serial");
+		}
+		if (parallelEnabled)
+		{
+			AppendPlugin(plugins, L"parallel");
 		}
 		if (!plugins.empty())
 		{
@@ -470,16 +968,23 @@ namespace
 			config += L"sb16: enabled=1, wavemode=1, midimode=1\n";
 			config += L"es1370: enabled=1, wavemode=1, midimode=1\n";
 		}
-		if (networkEnabled)
-		{
-			config += L"ne2k: ioaddr=0x300, irq=10, mac=52:54:00:12:34:56, ethmod=slirp, script=\"\"\n";
-		}
+		AppendNetworkConfig(config, networkAdapter, networkSocketPort);
+		AppendUsbConfig(config, usbController, usbDevice, usbImagePath);
+		AppendSerialConfig(config, serialMode);
+		AppendParallelConfig(config, parallelEnabled);
 
 		bool hasDisk = diskPath != nullptr && diskPath->Length() > 0;
+		bool hasDisk2 = disk2Path != nullptr && disk2Path->Length() > 0;
 		bool hasFloppy = floppyPath != nullptr && floppyPath->Length() > 0;
+		bool hasFloppyB = floppyBPath != nullptr && floppyBPath->Length() > 0;
 		bool hasCdrom = cdromPath != nullptr && cdromPath->Length() > 0;
+		bool hasCdrom2 = cdrom2Path != nullptr && cdrom2Path->Length() > 0;
 		bool hasSharedFolder = sharedFolderPath != nullptr && sharedFolderPath->Length() > 0;
-		std::wstring bootOrder = BuildBootOrder(boot, hasDisk, hasFloppy, hasCdrom);
+		std::wstring bootOrder = BuildBootOrder(
+			boot,
+			hasDisk || hasDisk2,
+			hasFloppy || hasFloppyB,
+			hasCdrom || hasCdrom2);
 
 		if (hasFloppy)
 		{
@@ -491,45 +996,51 @@ namespace
 		{
 			config += L"floppya: type=1_44\n";
 		}
-
-		if (hasDisk || hasCdrom)
+		if (hasFloppyB)
 		{
-			config += L"ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14\n";
-		}
-
-		if (hasDisk)
-		{
-			std::wstring disk(diskPath->Data());
-			std::wstring mode = NormalizeDiskImageMode(diskPath, diskImageMode);
-			config += L"ata0-master: type=disk, path=\"";
-			config += disk;
-			config += L"\", mode=";
-			config += mode;
-			config += L", translation=lba";
-			config += L"\n";
-		}
-
-		if (hasCdrom)
-		{
-			config += hasDisk
-				? L"ata0-slave: type=cdrom, path=\""
-				: L"ata0-master: type=cdrom, path=\"";
-			config += cdromPath->Data();
+			config += L"floppyb: image=\"";
+			config += floppyBPath->Data();
 			config += L"\", status=inserted\n";
 		}
+		else
+		{
+			config += L"floppyb: type=1_44\n";
+		}
 
+		int nextAtaSlot = 0;
+		int maxAtaSlot = -1;
+		if (hasDisk)
+		{
+			maxAtaSlot = (std::max)(maxAtaSlot, NextAtaSlot(nextAtaSlot));
+		}
+		if (hasDisk2)
+		{
+			maxAtaSlot = (std::max)(maxAtaSlot, NextAtaSlot(nextAtaSlot));
+		}
+		if (hasCdrom)
+		{
+			maxAtaSlot = (std::max)(maxAtaSlot, NextAtaSlot(nextAtaSlot));
+		}
+		if (hasCdrom2)
+		{
+			maxAtaSlot = (std::max)(maxAtaSlot, NextAtaSlot(nextAtaSlot));
+		}
 		if (hasSharedFolder)
 		{
-			std::wstring vvfatJournal(ApplicationData::Current->LocalFolder->Path->Data());
-			vvfatJournal += L"\\vvfat-readonly-redolog";
-			config += L"ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15\n";
-			config += L"ata1-master: type=disk, path=\"";
-			config += L"readonly:";
-			config += sharedFolderPath->Data();
-			config += L"\", mode=vvfat, journal=\"";
-			config += vvfatJournal;
-			config += L"\", translation=lba\n";
+			maxAtaSlot = (std::max)(maxAtaSlot, NextAtaSlot(nextAtaSlot));
 		}
+
+		for (int controller = 0; controller <= maxAtaSlot / 2; ++controller)
+		{
+			AppendAtaController(config, controller);
+		}
+
+		nextAtaSlot = 0;
+		AppendAtaDisk(config, hasDisk ? NextAtaSlot(nextAtaSlot) : -1, diskPath, diskImageMode);
+		AppendAtaDisk(config, hasDisk2 ? NextAtaSlot(nextAtaSlot) : -1, disk2Path, disk2ImageMode);
+		AppendAtaCdrom(config, hasCdrom ? NextAtaSlot(nextAtaSlot) : -1, cdromPath);
+		AppendAtaCdrom(config, hasCdrom2 ? NextAtaSlot(nextAtaSlot) : -1, cdrom2Path);
+		AppendAtaVvfat(config, hasSharedFolder ? NextAtaSlot(nextAtaSlot) : -1, sharedFolderPath);
 
 		config += L"boot: ";
 		config += bootOrder;
@@ -676,6 +1187,88 @@ task<String^> UWP_Port::BochsUwpStorage::CreateConfigAsync(
 	});
 }
 
+task<String^> UWP_Port::BochsUwpStorage::CreateConfigAsync(
+	String^ diskPath,
+	String^ disk2Path,
+	String^ floppyPath,
+	String^ floppyBPath,
+	String^ cdromPath,
+	String^ cdrom2Path,
+	String^ sharedFolderPath,
+	String^ bootTarget,
+	int memoryMb,
+	String^ cpuModel,
+	String^ biosPath,
+	String^ vgaBiosPath,
+	bool soundEnabled,
+	String^ networkAdapter,
+	String^ diskImageMode,
+	String^ disk2ImageMode,
+	String^ usbController,
+	String^ usbDevice,
+	String^ usbImagePath,
+	String^ serialMode,
+	bool parallelEnabled,
+	String^ videoExtension,
+	int videoUpdateFreq,
+	bool videoRealtime,
+	int vbeMemoryMb,
+	String^ displayLibrary,
+	int rfbTimeout,
+	int networkSocketPort,
+	String^ pciChipset,
+	bool acpiEnabled,
+	bool hpetEnabled,
+	bool ioApicEnabled)
+{
+	StorageFolder^ localFolder = ApplicationData::Current->LocalFolder;
+	String^ configText = CreateConfigText(
+		diskPath,
+		disk2Path,
+		floppyPath,
+		floppyBPath,
+		cdromPath,
+		cdrom2Path,
+		sharedFolderPath,
+		bootTarget,
+		memoryMb,
+		cpuModel,
+		biosPath,
+		vgaBiosPath,
+		soundEnabled,
+		networkAdapter,
+		diskImageMode,
+		disk2ImageMode,
+		usbController,
+		usbDevice,
+		usbImagePath,
+		serialMode,
+		parallelEnabled,
+		videoExtension,
+		videoUpdateFreq,
+		videoRealtime,
+		vbeMemoryMb,
+		displayLibrary,
+		rfbTimeout,
+		networkSocketPort,
+		pciChipset,
+		acpiEnabled,
+		hpetEnabled,
+		ioApicEnabled);
+	return create_task(localFolder->CreateFileAsync(
+		ref new String(L"bochsrc.generated.txt"),
+		CreationCollisionOption::OpenIfExists)).then([](StorageFile^ file)
+	{
+		return file;
+	}).then([configText](StorageFile^ file)
+	{
+		return create_task(FileIO::WriteTextAsync(file, configText)).then([file]()
+		{
+			return file->Path;
+		});
+	});
+}
+
 String^ UWP_Port::BochsUwpStorage::CreateConfigText(
 	String^ diskPath,
 	String^ floppyPath,
@@ -747,8 +1340,11 @@ String^ UWP_Port::BochsUwpStorage::CreateConfigText(
 {
 	return DefaultBochsrcText(
 		diskPath,
+		nullptr,
 		floppyPath,
+		nullptr,
 		cdromPath,
+		nullptr,
 		sharedFolderPath,
 		bootTarget,
 		memoryMb,
@@ -756,8 +1352,94 @@ String^ UWP_Port::BochsUwpStorage::CreateConfigText(
 		biosPath,
 		vgaBiosPath,
 		soundEnabled,
-		networkEnabled,
-		diskImageMode);
+		networkEnabled ? ref new String(L"ne2k") : ref new String(L"none"),
+		diskImageMode,
+		nullptr,
+		ref new String(L"none"),
+		ref new String(L"none"),
+		nullptr,
+		ref new String(L"disabled"),
+		false,
+		ref new String(L"vbe"),
+		10,
+		true,
+		16,
+		ref new String(L"uwp_dx"),
+		0,
+		40000,
+		ref new String(L"i440fx"),
+		true,
+		true,
+		true);
+}
+
+String^ UWP_Port::BochsUwpStorage::CreateConfigText(
+	String^ diskPath,
+	String^ disk2Path,
+	String^ floppyPath,
+	String^ floppyBPath,
+	String^ cdromPath,
+	String^ cdrom2Path,
+	String^ sharedFolderPath,
+	String^ bootTarget,
+	int memoryMb,
+	String^ cpuModel,
+	String^ biosPath,
+	String^ vgaBiosPath,
+	bool soundEnabled,
+	String^ networkAdapter,
+	String^ diskImageMode,
+	String^ disk2ImageMode,
+	String^ usbController,
+	String^ usbDevice,
+	String^ usbImagePath,
+	String^ serialMode,
+	bool parallelEnabled,
+	String^ videoExtension,
+	int videoUpdateFreq,
+	bool videoRealtime,
+	int vbeMemoryMb,
+	String^ displayLibrary,
+	int rfbTimeout,
+	int networkSocketPort,
+	String^ pciChipset,
+	bool acpiEnabled,
+	bool hpetEnabled,
+	bool ioApicEnabled)
+{
+	return DefaultBochsrcText(
+		diskPath,
+		disk2Path,
+		floppyPath,
+		floppyBPath,
+		cdromPath,
+		cdrom2Path,
+		sharedFolderPath,
+		bootTarget,
+		memoryMb,
+		cpuModel,
+		biosPath,
+		vgaBiosPath,
+		soundEnabled,
+		networkAdapter,
+		diskImageMode,
+		disk2ImageMode,
+		usbController,
+		usbDevice,
+		usbImagePath,
+		serialMode,
+		parallelEnabled,
+		videoExtension,
+		videoUpdateFreq,
+		videoRealtime,
+		vbeMemoryMb,
+		displayLibrary,
+		rfbTimeout,
+		networkSocketPort,
+		pciChipset,
+		acpiEnabled,
+		hpetEnabled,
+		ioApicEnabled);
 }
 
 task<String^> UWP_Port::BochsUwpStorage::PickDiskImageToLocalFolderAsync()

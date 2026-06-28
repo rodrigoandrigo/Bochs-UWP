@@ -25,6 +25,8 @@ namespace
 		IRandomAccessStream^ stream;
 		IBuffer^ readBuffer;
 		IBuffer^ writeBuffer;
+		unsigned char *readBytes;
+		unsigned char *writeBytes;
 		unsigned int readBufferCapacity;
 		unsigned int writeBufferCapacity;
 		unsigned long long position;
@@ -121,6 +123,8 @@ namespace
 		file->stream = stream;
 		file->readBuffer = nullptr;
 		file->writeBuffer = nullptr;
+		file->readBytes = nullptr;
+		file->writeBytes = nullptr;
 		file->readBufferCapacity = 0;
 		file->writeBufferCapacity = 0;
 		file->position = 0;
@@ -139,12 +143,13 @@ namespace
 		return it == g_files.end() ? std::shared_ptr<UwpFileHandle>() : it->second;
 	}
 
-	IBuffer^ EnsureBuffer(IBuffer^ current, unsigned int& capacity, unsigned int bytesRequested)
+	IBuffer^ EnsureBuffer(IBuffer^ current, unsigned char *&bytes, unsigned int& capacity, unsigned int bytesRequested)
 	{
 		if (current == nullptr || capacity < bytesRequested)
 		{
 			current = ref new Buffer(bytesRequested);
 			capacity = bytesRequested;
+			bytes = GetBufferBytes(current);
 		}
 		return current;
 	}
@@ -183,10 +188,6 @@ extern "C" int bx_uwp_file_open(const char *uri, unsigned flags, unsigned long l
 		}
 		catch (...)
 		{
-			if (writable)
-			{
-				return -1;
-			}
 			writable = false;
 			stream = create_task(file->OpenAsync(FileAccessMode::Read)).get();
 		}
@@ -243,6 +244,8 @@ extern "C" void bx_uwp_file_close(int handle)
 		file->stream = nullptr;
 		file->readBuffer = nullptr;
 		file->writeBuffer = nullptr;
+		file->readBytes = nullptr;
+		file->writeBytes = nullptr;
 	}
 	catch (...)
 	{
@@ -308,7 +311,11 @@ extern "C" intptr_t bx_uwp_file_read(int handle, void *buf, size_t count)
 
 		unsigned int bytesRequested = static_cast<unsigned int>(
 			(std::min)(count, static_cast<size_t>(MaxTransferBytes)));
-		file->readBuffer = EnsureBuffer(file->readBuffer, file->readBufferCapacity, bytesRequested);
+		file->readBuffer = EnsureBuffer(file->readBuffer, file->readBytes, file->readBufferCapacity, bytesRequested);
+		if (file->readBytes == nullptr)
+		{
+			return -1;
+		}
 		file->stream->Seek(file->position);
 		IBuffer^ buffer = create_task(file->stream->ReadAsync(
 			file->readBuffer, bytesRequested, InputStreamOptions::None)).get();
@@ -316,7 +323,9 @@ extern "C" intptr_t bx_uwp_file_read(int handle, void *buf, size_t count)
 		unsigned int bytesRead = buffer->Length;
 		if (bytesRead > 0)
 		{
-			unsigned char *bytes = GetBufferBytes(buffer);
+			unsigned char *bytes = buffer == file->readBuffer
+				? file->readBytes
+				: GetBufferBytes(buffer);
 			if (bytes == nullptr)
 			{
 				return -1;
@@ -350,15 +359,14 @@ extern "C" intptr_t bx_uwp_file_write(int handle, const void *buf, size_t count)
 
 		unsigned int bytesRequested = static_cast<unsigned int>(
 			(std::min)(count, static_cast<size_t>(MaxTransferBytes)));
-		file->writeBuffer = EnsureBuffer(file->writeBuffer, file->writeBufferCapacity, bytesRequested);
+		file->writeBuffer = EnsureBuffer(file->writeBuffer, file->writeBytes, file->writeBufferCapacity, bytesRequested);
 		IBuffer^ buffer = file->writeBuffer;
 		buffer->Length = bytesRequested;
-		unsigned char *bytes = GetBufferBytes(buffer);
-		if (bytes == nullptr)
+		if (file->writeBytes == nullptr)
 		{
 			return -1;
 		}
-		memcpy(bytes, buf, bytesRequested);
+		memcpy(file->writeBytes, buf, bytesRequested);
 
 		file->stream->Seek(file->position);
 		unsigned int bytesWritten = create_task(file->stream->WriteAsync(buffer)).get();

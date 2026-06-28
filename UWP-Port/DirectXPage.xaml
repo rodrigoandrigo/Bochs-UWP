@@ -28,6 +28,12 @@
         Background="#F01F1F1F"
         Foreground="White"
         HorizontalContentAlignment="Right">
+      <CommandBar.Resources>
+        <Style TargetType="AppBarButton">
+          <Setter Property="AllowFocusOnInteraction" Value="False" />
+          <Setter Property="IsTabStop" Value="False" />
+        </Style>
+      </CommandBar.Resources>
       <CommandBar.PrimaryCommands>
         <AppBarButton
             x:Name="toggleTabsButton"
@@ -71,11 +77,44 @@
             Label="Restore"
             Click="RestoreButton_Click"
             Foreground="White" />
+        <AppBarButton
+            x:Name="runtimeFloppyAButton"
+            Icon="OpenFile"
+            Label="Floppy A"
+            Click="RuntimeFloppyAButton_Click"
+            Foreground="White" />
+        <AppBarButton
+            x:Name="runtimeFloppyBButton"
+            Icon="OpenFile"
+            Label="Floppy B"
+            Click="RuntimeFloppyBButton_Click"
+            Foreground="White" />
+        <AppBarButton
+            x:Name="runtimeCdromButton"
+            Icon="OpenFile"
+            Label="CD-ROM"
+            Click="RuntimeCdromButton_Click"
+            Foreground="White" />
+        <AppBarButton
+            x:Name="runtimeEjectButton"
+            Icon="Clear"
+            Label="Eject"
+            Click="RuntimeEjectButton_Click"
+            Foreground="White" />
       </CommandBar.PrimaryCommands>
     </CommandBar>
 
     <Grid Grid.Row="1" Background="Black">
     <SwapChainPanel x:Name="swapChainPanel" />
+    <ContentControl
+        x:Name="emulatorFocusTarget"
+        Width="1"
+        Height="1"
+        HorizontalAlignment="Left"
+        VerticalAlignment="Top"
+        IsHitTestVisible="False"
+        IsTabStop="True"
+        TabIndex="0" />
 
     <Grid x:Name="readyOverlay" IsHitTestVisible="False">
       <StackPanel
@@ -102,11 +141,65 @@
     </Grid>
 
     <Grid
+        x:Name="rfbStatusOverlay"
+        Visibility="Collapsed"
+        IsHitTestVisible="False"
+        Background="#FF050505">
+      <StackPanel
+          MaxWidth="760"
+          HorizontalAlignment="Center"
+          VerticalAlignment="Center"
+          Spacing="12"
+          Margin="24">
+        <TextBlock
+            Text="VNC/RFB server"
+            Foreground="White"
+            FontSize="28"
+            FontWeight="SemiBold"
+            TextAlignment="Center" />
+        <TextBlock
+            x:Name="rfbStatusText"
+            Text="Status: stopped"
+            Foreground="{StaticResource AccentBrush}"
+            FontSize="18"
+            TextAlignment="Center"
+            TextWrapping="WrapWholeWords" />
+        <TextBlock
+            x:Name="rfbEndpointText"
+            Text="IP: 127.0.0.1"
+            Foreground="White"
+            FontSize="16"
+            TextAlignment="Center"
+            TextWrapping="WrapWholeWords" />
+        <TextBlock
+            x:Name="rfbPortText"
+            Text="Port: 5900"
+            Foreground="White"
+            FontSize="16"
+            TextAlignment="Center"
+            TextWrapping="WrapWholeWords" />
+        <TextBlock
+            x:Name="rfbConnectionText"
+            Text="Connection: waiting"
+            Foreground="{StaticResource MutedTextBrush}"
+            FontSize="15"
+            TextAlignment="Center"
+            TextWrapping="WrapWholeWords" />
+      </StackPanel>
+    </Grid>
+
+    <Grid
         x:Name="topChrome"
         Height="50"
         VerticalAlignment="Top"
         Visibility="Collapsed"
         Background="#E61F1F1F">
+      <Grid.Resources>
+        <Style TargetType="AppBarButton">
+          <Setter Property="AllowFocusOnInteraction" Value="False" />
+          <Setter Property="IsTabStop" Value="False" />
+        </Style>
+      </Grid.Resources>
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" />
@@ -168,6 +261,48 @@
         <Rectangle Grid.ColumnSpan="2" Height="2" Fill="#FF008CFF" VerticalAlignment="Bottom" />
       </Grid>
     </Grid>
+
+    <StackPanel
+        x:Name="inputCaptureOverlay"
+        Orientation="Horizontal"
+        Spacing="8"
+        Margin="0,14,14,0"
+        HorizontalAlignment="Right"
+        VerticalAlignment="Top"
+        IsHitTestVisible="False">
+      <Border
+          x:Name="keyboardCaptureIndicator"
+          Width="36"
+          Height="32"
+          CornerRadius="4"
+          Background="#CC101010"
+          BorderBrush="#FF00C853"
+          BorderThickness="1"
+          Visibility="Collapsed">
+        <FontIcon
+            Glyph="&#xE765;"
+            Foreground="White"
+            FontSize="18"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center" />
+      </Border>
+      <Border
+          x:Name="mouseCaptureIndicator"
+          Width="36"
+          Height="32"
+          CornerRadius="4"
+          Background="#CC101010"
+          BorderBrush="#FF00C853"
+          BorderThickness="1"
+          Visibility="Collapsed">
+        <FontIcon
+            Glyph="&#xE962;"
+            Foreground="White"
+            FontSize="18"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center" />
+      </Border>
+    </StackPanel>
 
     <ScrollViewer
         x:Name="configurationPanel"
@@ -300,6 +435,66 @@
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
               <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="HDD 2" Foreground="White" FontWeight="SemiBold" />
+                <TextBlock Text="Additional IDE disk" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="8" Margin="10,0,10,0" VerticalAlignment="Center">
+                <TextBlock
+                    x:Name="disk2PathText"
+                    Text="No image selected"
+                    Foreground="{StaticResource MutedTextBrush}"
+                    TextWrapping="WrapWholeWords" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="Mode" Foreground="White" VerticalAlignment="Center" />
+                  <ComboBox
+                      x:Name="disk2ImageModeComboBox"
+                      SelectedIndex="0"
+                      SelectionChanged="DiskImageModeComboBox_SelectionChanged"
+                      Width="220">
+                    <ComboBoxItem Content="Automatic" Tag="auto" />
+                    <ComboBoxItem Content="Raw / flat" Tag="flat" />
+                    <ComboBoxItem Content="VHD / VirtualPC" Tag="vpc" />
+                    <ComboBoxItem Content="VDI / VirtualBox" Tag="vbox" />
+                    <ComboBoxItem Content="VMDK / VMware 4" Tag="vmware4" />
+                    <ComboBoxItem Content="VMDK / VMware 3" Tag="vmware3" />
+                    <ComboBoxItem Content="Sparse" Tag="sparse" />
+                    <ComboBoxItem Content="Growing" Tag="growing" />
+                    <ComboBoxItem Content="Undoable" Tag="undoable" />
+                    <ComboBoxItem Content="Volatile" Tag="volatile" />
+                  </ComboBox>
+                  <TextBlock
+                      x:Name="disk2ImageModeText"
+                      Text="Effective mode: flat"
+                      Foreground="{StaticResource MutedTextBrush}"
+                      VerticalAlignment="Center"
+                      TextWrapping="WrapWholeWords" />
+                </StackPanel>
+              </StackPanel>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <AppBarButton
+                    x:Name="resetDisk2Button"
+                    Icon="Delete"
+                    Label="Remove"
+                    Click="ResetDisk2Button_Click"
+                    Foreground="White" />
+                <AppBarButton
+                    x:Name="chooseDisk2Button"
+                    Icon="OpenFile"
+                    Label="Select HDD 2"
+                    Click="ChooseDisk2Button_Click"
+                    Foreground="White" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                 <TextBlock Text="ISO / CD-ROM" Foreground="White" FontWeight="SemiBold" />
                 <TextBlock Text="Live CD or installer" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
               </StackPanel>
@@ -336,6 +531,42 @@
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
               <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="ISO 2" Foreground="White" FontWeight="SemiBold" />
+                <TextBlock Text="Additional CD-ROM" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+              </StackPanel>
+              <TextBlock
+                  Grid.Column="1"
+                  x:Name="cdrom2PathText"
+                  Text="No ISO selected"
+                  Foreground="{StaticResource MutedTextBrush}"
+                  TextWrapping="WrapWholeWords"
+                  Margin="10,0,10,0"
+                  VerticalAlignment="Center" />
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <AppBarButton
+                    x:Name="resetCdrom2Button"
+                    Icon="Delete"
+                    Label="Remove"
+                    Click="ResetCdrom2Button_Click"
+                    Foreground="White" />
+                <AppBarButton
+                    x:Name="chooseCdrom2Button"
+                    Icon="OpenFile"
+                    Label="Select ISO 2"
+                    Click="ChooseCdrom2Button_Click"
+                    Foreground="White" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                 <TextBlock Text="Floppy" Foreground="White" FontWeight="SemiBold" />
                 <TextBlock Text="Floppy image" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
               </StackPanel>
@@ -359,6 +590,42 @@
                     Icon="OpenFile"
                     Label="Select floppy"
                     Click="ChooseFloppyButton_Click"
+                    Foreground="White" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="Floppy B" Foreground="White" FontWeight="SemiBold" />
+                <TextBlock Text="Second floppy image" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+              </StackPanel>
+              <TextBlock
+                  Grid.Column="1"
+                  x:Name="floppyBPathText"
+                  Text="No floppy selected"
+                  Foreground="{StaticResource MutedTextBrush}"
+                  TextWrapping="WrapWholeWords"
+                  Margin="10,0,10,0"
+                  VerticalAlignment="Center" />
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <AppBarButton
+                    x:Name="resetFloppyBButton"
+                    Icon="Delete"
+                    Label="Remove"
+                    Click="ResetFloppyBButton_Click"
+                    Foreground="White" />
+                <AppBarButton
+                    x:Name="chooseFloppyBButton"
+                    Icon="OpenFile"
+                    Label="Select floppy B"
+                    Click="ChooseFloppyBButton_Click"
                     Foreground="White" />
               </StackPanel>
             </Grid>
@@ -487,6 +754,34 @@
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="150" />
                 <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBlock
+                  Grid.Column="0"
+                  Text="Profile"
+                  Foreground="White"
+                  FontWeight="SemiBold"
+                  VerticalAlignment="Center" />
+              <ComboBox
+                  Grid.Column="1"
+                  x:Name="machineProfileComboBox"
+                  SelectedIndex="2"
+                  SelectionChanged="MachineProfileComboBox_SelectionChanged"
+                  Width="360"
+                  Margin="10,0,0,0"
+                  HorizontalAlignment="Left">
+                <ComboBoxItem Content="Legacy 486" Tag="legacy486" />
+                <ComboBoxItem Content="Pentium MMX" Tag="pentium" />
+                <ComboBoxItem Content="Balanced PC" Tag="balanced" />
+                <ComboBoxItem Content="Modern desktop" Tag="modern" />
+                <ComboBoxItem Content="Custom" Tag="custom" />
+              </ComboBox>
+            </Grid>
+          </Border>
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="110" />
               </Grid.ColumnDefinitions>
               <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
@@ -533,6 +828,7 @@
                   Grid.Column="1"
                   x:Name="cpuModelComboBox"
                   SelectedIndex="24"
+                  SelectionChanged="FeatureSelection_Changed"
                   Width="520"
                   Margin="10,0,0,0"
                   HorizontalAlignment="Left">
@@ -572,10 +868,134 @@
             </Grid>
           </Border>
 
+          <TextBlock Text="VIDEO" Foreground="White" FontWeight="SemiBold" />
+          <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="150" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Output" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="10,0,0,8">
+                <ComboBox
+                    x:Name="displayLibraryComboBox"
+                    SelectedIndex="0"
+                    SelectionChanged="FeatureSelection_Changed"
+                    Width="190">
+                  <ComboBoxItem Content="DirectX local" Tag="uwp_dx" />
+                  <ComboBoxItem Content="VNC/RFB server" Tag="rfb" />
+                </ComboBox>
+                <TextBlock
+                    Text="VNC uses ports 5900-5949"
+                    Foreground="{StaticResource MutedTextBrush}"
+                    VerticalAlignment="Center" />
+              </StackPanel>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Adapter" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="10,0,0,8">
+                <ComboBox
+                    x:Name="videoExtensionComboBox"
+                    SelectedIndex="1"
+                    SelectionChanged="FeatureSelection_Changed"
+                    Width="190">
+                  <ComboBoxItem Content="Standard VGA" Tag="none" />
+                  <ComboBoxItem Content="Bochs VBE" Tag="vbe" />
+                  <ComboBoxItem Content="Cirrus SVGA" Tag="cirrus" />
+                </ComboBox>
+                <ComboBox
+                    x:Name="vbeMemoryComboBox"
+                    SelectedIndex="2"
+                    SelectionChanged="FeatureSelection_Changed"
+                    Width="130">
+                  <ComboBoxItem Content="4 MB" Tag="4" />
+                  <ComboBoxItem Content="8 MB" Tag="8" />
+                  <ComboBoxItem Content="16 MB" Tag="16" />
+                  <ComboBoxItem Content="32 MB" Tag="32" />
+                </ComboBox>
+              </StackPanel>
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Refresh" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <Slider
+                  Grid.Row="2"
+                  Grid.Column="1"
+                  x:Name="videoUpdateSlider"
+                  Minimum="0"
+                  Maximum="75"
+                  Value="10"
+                  StepFrequency="1"
+                  ValueChanged="VideoSlider_ValueChanged"
+                  Margin="10,0,14,8"
+                  HorizontalAlignment="Stretch"
+                  Foreground="{StaticResource AccentBrush}" />
+              <TextBlock
+                  Grid.Row="2"
+                  Grid.Column="2"
+                  x:Name="videoUpdateText"
+                  Text="10 Hz"
+                  Foreground="White"
+                  FontWeight="SemiBold"
+                  VerticalAlignment="Center"
+                  TextAlignment="Right" />
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="VNC wait" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <Slider
+                  Grid.Row="3"
+                  Grid.Column="1"
+                  x:Name="rfbTimeoutSlider"
+                  Minimum="0"
+                  Maximum="300"
+                  Value="0"
+                  StepFrequency="1"
+                  ValueChanged="VideoSlider_ValueChanged"
+                  Margin="10,0,14,8"
+                  HorizontalAlignment="Stretch"
+                  Foreground="{StaticResource AccentBrush}" />
+              <TextBlock
+                  Grid.Row="3"
+                  Grid.Column="2"
+                  x:Name="rfbTimeoutText"
+                  Text="0 s"
+                  Foreground="White"
+                  FontWeight="SemiBold"
+                  VerticalAlignment="Center"
+                  TextAlignment="Right" />
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="Timer" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <ToggleSwitch
+                  Grid.Row="4"
+                  Grid.Column="1"
+                  x:Name="videoRealtimeToggleSwitch"
+                  Header="Realtime VGA update timer"
+                  IsOn="True"
+                  OnContent="Realtime"
+                  OffContent="CPU"
+                  Toggled="FeatureToggle_Changed"
+                  Foreground="White"
+                  Margin="10,0,0,0" />
+            </Grid>
+          </Border>
+
           <TextBlock Text="FEATURES" Foreground="White" FontWeight="SemiBold" />
           <Border BorderBrush="{StaticResource SectionLineBrush}" BorderThickness="1" Padding="12">
             <Grid>
               <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
               </Grid.RowDefinitions>
@@ -593,17 +1013,151 @@
                   OnContent="On"
                   OffContent="Off"
                   Foreground="White"
+                  Toggled="FeatureToggle_Changed"
                   Margin="10,0,0,8" />
               <TextBlock Grid.Row="1" Grid.Column="0" Text="Network" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
-              <ToggleSwitch
+              <ComboBox
                   Grid.Row="1"
                   Grid.Column="1"
-                  x:Name="networkToggleSwitch"
-                  Header="NE2K via slirp"
-                  IsOn="True"
+                  x:Name="networkAdapterComboBox"
+                  SelectedIndex="1"
+                  SelectionChanged="FeatureSelection_Changed"
+                  Width="260"
+                  Margin="10,8,0,8"
+                  HorizontalAlignment="Left">
+                <ComboBoxItem Content="Disabled" Tag="none" />
+                <ComboBoxItem Content="NE2K PCI via slirp" Tag="ne2k" />
+                <ComboBoxItem Content="Intel E1000 via slirp" Tag="e1000" />
+                <ComboBoxItem Content="NE2K PCI via socket" Tag="ne2k_socket" />
+                <ComboBoxItem Content="Intel E1000 via socket" Tag="e1000_socket" />
+                <ComboBoxItem Content="NE2K PCI via vnet" Tag="ne2k_vnet" />
+                <ComboBoxItem Content="Intel E1000 via vnet" Tag="e1000_vnet" />
+              </ComboBox>
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Socket port" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <TextBox
+                  Grid.Row="2"
+                  Grid.Column="1"
+                  x:Name="networkSocketPortTextBox"
+                  Text="40000"
+                  TextChanged="NetworkSocketPortTextBox_TextChanged"
+                  Width="120"
+                  Margin="10,4,0,8"
+                  HorizontalAlignment="Left" />
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="Chipset" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <ComboBox
+                  Grid.Row="3"
+                  Grid.Column="1"
+                  x:Name="pciChipsetComboBox"
+                  SelectedIndex="1"
+                  SelectionChanged="FeatureSelection_Changed"
+                  Width="260"
+                  Margin="10,8,0,8"
+                  HorizontalAlignment="Left">
+                <ComboBoxItem Content="Intel i430FX" Tag="i430fx" />
+                <ComboBoxItem Content="Intel i440FX" Tag="i440fx" />
+                <ComboBoxItem Content="Intel i440BX" Tag="i440bx" />
+              </ComboBox>
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="PCI devices" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="12" Margin="10,4,0,8">
+                <ToggleSwitch
+                    x:Name="acpiToggleSwitch"
+                    Header="ACPI"
+                    IsOn="True"
+                    OnContent="On"
+                    OffContent="Off"
+                    Foreground="White"
+                    Toggled="FeatureToggle_Changed" />
+                <ToggleSwitch
+                    x:Name="hpetToggleSwitch"
+                    Header="HPET"
+                    IsOn="True"
+                    OnContent="On"
+                    OffContent="Off"
+                    Foreground="White"
+                    Toggled="FeatureToggle_Changed" />
+                <ToggleSwitch
+                    x:Name="ioApicToggleSwitch"
+                    Header="IOAPIC"
+                    IsOn="True"
+                    OnContent="On"
+                    OffContent="Off"
+                    Foreground="White"
+                    Toggled="FeatureToggle_Changed" />
+              </StackPanel>
+              <TextBlock Grid.Row="5" Grid.Column="0" Text="USB" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="10,8,0,8">
+                <ComboBox
+                    x:Name="usbControllerComboBox"
+                    SelectedIndex="0"
+                    SelectionChanged="FeatureSelection_Changed"
+                    Width="170">
+                  <ComboBoxItem Content="Disabled" Tag="none" />
+                  <ComboBoxItem Content="UHCI" Tag="uhci" />
+                  <ComboBoxItem Content="OHCI" Tag="ohci" />
+                  <ComboBoxItem Content="EHCI + UHCI" Tag="ehci" />
+                  <ComboBoxItem Content="xHCI" Tag="xhci" />
+                </ComboBox>
+                <ComboBox
+                    x:Name="usbDeviceComboBox"
+                    SelectedIndex="0"
+                    SelectionChanged="FeatureSelection_Changed"
+                    Width="170">
+                  <ComboBoxItem Content="No device" Tag="none" />
+                  <ComboBoxItem Content="Tablet" Tag="tablet" />
+                  <ComboBoxItem Content="Mouse" Tag="mouse" />
+                  <ComboBoxItem Content="Disk image" Tag="disk" />
+                  <ComboBoxItem Content="CD-ROM image" Tag="cdrom" />
+                  <ComboBoxItem Content="Floppy image" Tag="floppy" />
+                </ComboBox>
+                <AppBarButton
+                    x:Name="resetUsbImageButton"
+                    Icon="Delete"
+                    Label="Clear USB image"
+                    Click="ResetUsbImageButton_Click"
+                    Foreground="White"
+                    IsCompact="True" />
+                <AppBarButton
+                    x:Name="chooseUsbImageButton"
+                    Icon="OpenFile"
+                    Label="Select USB image"
+                    Click="ChooseUsbImageButton_Click"
+                    Foreground="White"
+                    IsCompact="True" />
+              </StackPanel>
+              <TextBlock Grid.Row="6" Grid.Column="0" Text="USB image" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <TextBlock
+                  Grid.Row="6"
+                  Grid.Column="1"
+                  x:Name="usbImagePathText"
+                  Text="No USB image selected"
+                  Foreground="{StaticResource MutedTextBrush}"
+                  TextWrapping="WrapWholeWords"
+                  Margin="10,4,0,8" />
+              <TextBlock Grid.Row="7" Grid.Column="0" Text="Serial COM1" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <ComboBox
+                  Grid.Row="7"
+                  Grid.Column="1"
+                  x:Name="serialModeComboBox"
+                  SelectedIndex="0"
+                  SelectionChanged="FeatureSelection_Changed"
+                  Width="260"
+                  Margin="10,8,0,8"
+                  HorizontalAlignment="Left">
+                <ComboBoxItem Content="Disabled" Tag="disabled" />
+                <ComboBoxItem Content="Null sink" Tag="null" />
+                <ComboBoxItem Content="Redirect to LocalFolder\com1.txt" Tag="file" />
+              </ComboBox>
+              <TextBlock Grid.Row="8" Grid.Column="0" Text="Parallel LPT1" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <ToggleSwitch
+                  Grid.Row="8"
+                  Grid.Column="1"
+                  x:Name="parallelToggleSwitch"
+                  Header="Redirect to LocalFolder\parport1.out"
+                  IsOn="False"
                   OnContent="On"
                   OffContent="Off"
                   Foreground="White"
+                  Toggled="FeatureToggle_Changed"
                   Margin="10,8,0,0" />
             </Grid>
           </Border>

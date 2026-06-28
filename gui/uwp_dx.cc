@@ -14,9 +14,11 @@
 #if BX_WITH_UWP_DX
 
 #include <algorithm>
+#include <cstring>
 #include <deque>
 #include <mutex>
 #include <stdint.h>
+#include <string>
 #include <vector>
 
 #include "icon_bochs.h"
@@ -53,6 +55,7 @@ public:
   void enqueue_pointer(int x, int y, int z, unsigned buttons, int absolute);
   void enqueue_focus(int focused);
   void enqueue_mouse_capture_request(int enabled);
+  void enqueue_runtime_media(const char *target, const char *path, int inserted);
   void enqueue_shutdown();
 
 private:
@@ -61,7 +64,8 @@ private:
     UWP_DX_EVENT_POINTER,
     UWP_DX_EVENT_FOCUS,
     UWP_DX_EVENT_SHUTDOWN,
-    UWP_DX_EVENT_MOUSE_CAPTURE_REQUEST
+    UWP_DX_EVENT_MOUSE_CAPTURE_REQUEST,
+    UWP_DX_EVENT_RUNTIME_MEDIA
   };
   struct uwp_dx_event {
     uwp_dx_event_type type;
@@ -74,6 +78,9 @@ private:
     int absolute;
     int focused;
     int capture_enabled;
+    int media_inserted;
+    std::string media_target;
+    std::string media_path;
   };
 
   void resize_framebuffer(unsigned x, unsigned y);
@@ -92,6 +99,7 @@ private:
   void update_modifier_state(Bit32u bx_key, int pressed);
   bool handle_mouse_toggle_key(Bit32u bx_key, int pressed);
   bool handle_mouse_toggle_buttons(unsigned buttons);
+  void set_runtime_media(const char *target, const char *path, int inserted);
   void release_keyboard_state();
 
   std::vector<uint32_t> framebuffer;
@@ -396,12 +404,22 @@ static void uwp_dx_sink_mouse_capture_event(int enabled)
   }
 }
 
+static void uwp_dx_sink_runtime_media_event(const char *target,
+                                            const char *path,
+                                            int inserted)
+{
+  if (theGui != NULL) {
+    theGui->enqueue_runtime_media(target, path, inserted);
+  }
+}
+
 static const bx_uwp_dx_sink_t uwp_dx_sink = {
   uwp_dx_sink_key_event,
   uwp_dx_sink_pointer_event,
   uwp_dx_sink_focus_event,
   uwp_dx_sink_shutdown_event,
-  uwp_dx_sink_mouse_capture_event
+  uwp_dx_sink_mouse_capture_event,
+  uwp_dx_sink_runtime_media_event
 };
 
 Bit32u bx_uwp_dx_gui_c::palette_bgra(Bit8u index) const
@@ -515,6 +533,17 @@ void bx_uwp_dx_gui_c::enqueue_mouse_capture_request(int enabled)
   enqueue_event(event);
 }
 
+void bx_uwp_dx_gui_c::enqueue_runtime_media(const char *target, const char *path,
+                                            int inserted)
+{
+  uwp_dx_event event = {};
+  event.type = UWP_DX_EVENT_RUNTIME_MEDIA;
+  event.media_target = target ? target : "";
+  event.media_path = path ? path : "";
+  event.media_inserted = inserted;
+  enqueue_event(event);
+}
+
 void bx_uwp_dx_gui_c::enqueue_shutdown()
 {
   uwp_dx_event event = {};
@@ -604,6 +633,42 @@ bool bx_uwp_dx_gui_c::handle_mouse_toggle_buttons(unsigned buttons)
     toggle_mouse_enable();
   }
   return toggled;
+}
+
+void bx_uwp_dx_gui_c::set_runtime_media(const char *target, const char *path,
+                                        int inserted)
+{
+  if (target == NULL || target[0] == 0) {
+    return;
+  }
+
+  bx_param_c *media = NULL;
+  if (!strcmp(target, "floppya")) {
+    media = SIM->get_param(BXPN_FLOPPYA);
+  } else if (!strcmp(target, "floppyb")) {
+    media = SIM->get_param(BXPN_FLOPPYB);
+  } else if (!strcmp(target, "cdrom")) {
+    media = SIM->get_first_cdrom();
+  }
+
+  if (media == NULL) {
+    BX_ERROR(("UWP runtime media target '%s' is not available", target));
+    return;
+  }
+
+  if (inserted) {
+    if (path == NULL || path[0] == 0) {
+      BX_ERROR(("UWP runtime media insert requested without a path"));
+      return;
+    }
+    SIM->get_param_string("path", media)->set(path);
+    SIM->get_param_enum("status", media)->set(BX_INSERTED);
+  } else {
+    SIM->get_param_enum("status", media)->set(BX_EJECTED);
+  }
+
+  SIM->update_runtime_options();
+  BX_INFO(("UWP runtime media %s %s", target, inserted ? "inserted" : "ejected"));
 }
 
 Bit32u bx_uwp_dx_gui_c::map_native_key(unsigned native_key, int pressed)
@@ -759,6 +824,10 @@ void bx_uwp_dx_gui_c::handle_events(void)
         }
         break;
       }
+      case UWP_DX_EVENT_RUNTIME_MEDIA:
+        set_runtime_media(event.media_target.c_str(), event.media_path.c_str(),
+                          event.media_inserted);
+        break;
       case UWP_DX_EVENT_SHUTDOWN:
         bx_exit(0);
         break;

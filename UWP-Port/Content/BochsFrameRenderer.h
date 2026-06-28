@@ -42,6 +42,7 @@ namespace UWP_Port
 		unsigned m_textureHeight;
 		unsigned m_sourceWidth;
 		unsigned m_sourceHeight;
+		BochsFrameSnapshot m_frameSnapshot;
 		std::vector<uint32_t> m_scaledPixels;
 		bool m_loadingComplete;
 	};

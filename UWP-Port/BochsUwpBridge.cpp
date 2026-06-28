@@ -47,6 +47,24 @@ namespace
 		g_frame.dirtyRect.height = bottom - top;
 		g_frame.dirtyRect.valid = true;
 	}
+
+	std::string PlatformStringToUtf8(Platform::String^ value)
+	{
+		if (value == nullptr || value->Length() == 0)
+		{
+			return std::string();
+		}
+
+		int length = WideCharToMultiByte(CP_UTF8, 0, value->Data(), -1, nullptr, 0, nullptr, nullptr);
+		if (length <= 1)
+		{
+			return std::string();
+		}
+
+		std::string result(static_cast<size_t>(length - 1), '\0');
+		WideCharToMultiByte(CP_UTF8, 0, value->Data(), -1, &result[0], length, nullptr, nullptr);
+		return result;
+	}
 }
 
 extern "C" void bx_uwp_dx_host_set_sink(const bx_uwp_dx_sink_t *sink)
@@ -144,23 +162,69 @@ extern "C" void bx_uwp_dx_host_set_status_text(const char *text)
 
 BochsFrameSnapshot BochsUwpBridge::CopyFrame(bool forcePixels)
 {
+	BochsFrameSnapshot copy = {};
+	CopyFrameInto(copy, forcePixels);
+	return copy;
+}
+
+bool BochsUwpBridge::CopyFrameInto(BochsFrameSnapshot& target, bool forcePixels)
+{
 	std::lock_guard<std::mutex> lock(g_bridgeMutex);
 	bool includePixels = g_frame.valid && (g_frame.dirty || forcePixels);
-	BochsFrameSnapshot copy = {};
-	copy.width = g_frame.width;
-	copy.height = g_frame.height;
-	copy.pitch = g_frame.pitch;
-	copy.bpp = g_frame.bpp;
-	copy.valid = g_frame.valid;
-	copy.statusText = g_frame.statusText;
-	copy.dirty = includePixels;
+	bool sizeChanged = target.width != g_frame.width ||
+		target.height != g_frame.height ||
+		target.pitch != g_frame.pitch ||
+		target.bpp != g_frame.bpp;
+
+	target.width = g_frame.width;
+	target.height = g_frame.height;
+	target.pitch = g_frame.pitch;
+	target.bpp = g_frame.bpp;
+	target.valid = g_frame.valid;
+	target.statusText = g_frame.statusText;
+	target.dirty = includePixels;
+	if (!target.valid)
+	{
+		target.pixels.clear();
+		target.dirtyRect = BochsDirtyRect{};
+		return false;
+	}
+
 	if (includePixels)
 	{
-		copy.pixels = g_frame.pixels;
-		copy.dirtyRect = g_frame.dirtyRect;
-		if (forcePixels && !g_frame.dirty)
+		target.dirtyRect = g_frame.dirtyRect;
+		if ((forcePixels && !g_frame.dirty) || sizeChanged || !target.dirtyRect.valid)
 		{
-			copy.dirtyRect = BochsDirtyRect{ 0, 0, g_frame.width, g_frame.height, g_frame.valid };
+			target.dirtyRect = BochsDirtyRect{ 0, 0, g_frame.width, g_frame.height, g_frame.valid };
+		}
+
+		size_t requiredPixels = static_cast<size_t>(g_frame.width) * static_cast<size_t>(g_frame.height);
+		if (target.pixels.size() != requiredPixels)
+		{
+			target.pixels.resize(requiredPixels);
+			target.dirtyRect = BochsDirtyRect{ 0, 0, g_frame.width, g_frame.height, g_frame.valid };
+		}
+
+		if (target.dirtyRect.valid &&
+			target.dirtyRect.width > 0 &&
+			target.dirtyRect.height > 0 &&
+			(target.dirtyRect.width != g_frame.width || target.dirtyRect.height != g_frame.height))
+		{
+			const unsigned rowBytes = target.dirtyRect.width * 4;
+			const uint32_t *src = g_frame.pixels.data() +
+				static_cast<size_t>(target.dirtyRect.y) * g_frame.width + target.dirtyRect.x;
+			uint32_t *dst = target.pixels.data() +
+				static_cast<size_t>(target.dirtyRect.y) * g_frame.width + target.dirtyRect.x;
+			for (unsigned row = 0; row < target.dirtyRect.height; ++row)
+			{
+				std::memcpy(dst, src, rowBytes);
+				src += g_frame.width;
+				dst += g_frame.width;
+			}
+		}
+		else
+		{
+			std::memcpy(target.pixels.data(), g_frame.pixels.data(), requiredPixels * sizeof(uint32_t));
 		}
 	}
 
@@ -170,7 +234,7 @@ BochsFrameSnapshot BochsUwpBridge::CopyFrame(bool forcePixels)
 		g_frame.dirtyRect = BochsDirtyRect{};
 	}
 	g_presentRequested = false;
-	return copy;
+	return includePixels;
 }
 
 void BochsUwpBridge::SendNativeKey(unsigned nativeKey, bool pressed)
@@ -235,6 +299,21 @@ void BochsUwpBridge::RequestShutdown()
 	if (callback)
 	{
 		callback();
+	}
+}
+
+void BochsUwpBridge::SetRuntimeMedia(Platform::String^ target, Platform::String^ path, bool inserted)
+{
+	bx_uwp_dx_runtime_media_cb callback = nullptr;
+	{
+		std::lock_guard<std::mutex> lock(g_bridgeMutex);
+		callback = g_sink.runtime_media_event;
+	}
+	if (callback)
+	{
+		std::string targetUtf8 = PlatformStringToUtf8(target);
+		std::string pathUtf8 = PlatformStringToUtf8(path);
+		callback(targetUtf8.c_str(), pathUtf8.c_str(), inserted ? 1 : 0);
 	}
 }
 

@@ -147,6 +147,10 @@
       <Link>Assets\VGABIOS-lgpl-latest.bin</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\bios\VGABIOS-lgpl-latest-cirrus.bin">
+      <Link>Assets\VGABIOS-lgpl-latest-cirrus.bin</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.xaml.h">

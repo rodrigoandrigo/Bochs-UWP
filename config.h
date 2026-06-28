@@ -307,11 +307,7 @@
 #define BX_WITH_UWP_DX 0
 #endif
 #define BX_WITH_TERM 0
-#if defined(BX_UWP_CORE_LIBRARY)
-#define BX_WITH_RFB 0
-#else
 #define BX_WITH_RFB 1
-#endif
 #define BX_WITH_VNCSRV 0
 #define BX_WITH_AMIGAOS 0
 #define BX_WITH_SDL 0
@@ -895,7 +891,7 @@ typedef Bit32u bx_phy_address;
 #define BX_NETMOD_SLIRP 1
 #endif
 #if defined(BX_UWP_CORE_LIBRARY)
-#define BX_NETMOD_SOCKET 0
+#define BX_NETMOD_SOCKET 1
 #else
 #define BX_NETMOD_SOCKET 1
 #endif

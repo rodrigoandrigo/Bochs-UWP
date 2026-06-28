@@ -2,7 +2,6 @@
 #include "BochsUwpAudio.h"
 
 #include <algorithm>
-#include <deque>
 #include <robuffer.h>
 #include <xaudio2.h>
 #include <vector>
@@ -62,7 +61,8 @@ namespace
 	AudioDeviceInputNode^ g_captureNode = nullptr;
 	AudioFrameOutputNode^ g_captureOutputNode = nullptr;
 	Windows::Foundation::EventRegistrationToken g_captureQuantumToken = {};
-	std::deque<unsigned char> g_captureQueue;
+	std::vector<unsigned char> g_captureQueue;
+	size_t g_captureReadOffset = 0;
 	unsigned g_captureSampleRate = 0;
 	unsigned g_captureBits = 0;
 	unsigned g_captureChannels = 0;
@@ -187,9 +187,19 @@ namespace
 			std::lock_guard<std::mutex> lock(g_captureMutex);
 			size_t maxBuffered = (std::max)(static_cast<size_t>(19200 * 8),
 				static_cast<size_t>(g_captureSampleRate) * g_captureChannels * ((std::max)(g_captureBits, 8u) / 8u));
-			while (g_captureQueue.size() + capacity > maxBuffered && !g_captureQueue.empty())
+			size_t buffered = g_captureQueue.size() >= g_captureReadOffset
+				? g_captureQueue.size() - g_captureReadOffset
+				: 0;
+			if (buffered + capacity > maxBuffered)
 			{
-				g_captureQueue.pop_front();
+				size_t drop = (std::min)(buffered, buffered + capacity - maxBuffered);
+				g_captureReadOffset += drop;
+			}
+			if (g_captureReadOffset > 0 &&
+				(g_captureReadOffset > 65536 || g_captureReadOffset * 2 > g_captureQueue.size()))
+			{
+				g_captureQueue.erase(g_captureQueue.begin(), g_captureQueue.begin() + g_captureReadOffset);
+				g_captureReadOffset = 0;
 			}
 			g_captureQueue.insert(g_captureQueue.end(), bytes, bytes + capacity);
 		}
@@ -254,6 +264,7 @@ namespace
 		g_captureOutputNode = nullptr;
 		g_captureGraph = nullptr;
 		g_captureQueue.clear();
+		g_captureReadOffset = 0;
 		g_captureSampleRate = 0;
 		g_captureBits = 0;
 		g_captureChannels = 0;
@@ -470,11 +481,24 @@ extern "C" int bx_uwp_audio_host_input_get(void *data, unsigned length)
 
 	std::lock_guard<std::mutex> lock(g_captureMutex);
 	unsigned char *out = static_cast<unsigned char *>(data);
-	unsigned copied = 0;
-	while (copied < length && !g_captureQueue.empty())
+	size_t available = g_captureQueue.size() >= g_captureReadOffset
+		? g_captureQueue.size() - g_captureReadOffset
+		: 0;
+	unsigned copied = static_cast<unsigned>((std::min)(static_cast<size_t>(length), available));
+	if (copied > 0)
 	{
-		out[copied++] = g_captureQueue.front();
-		g_captureQueue.pop_front();
+		std::memcpy(out, g_captureQueue.data() + g_captureReadOffset, copied);
+		g_captureReadOffset += copied;
+		if (g_captureReadOffset >= g_captureQueue.size())
+		{
+			g_captureQueue.clear();
+			g_captureReadOffset = 0;
+		}
+		else if (g_captureReadOffset > 65536 && g_captureReadOffset * 2 > g_captureQueue.size())
+		{
+			g_captureQueue.erase(g_captureQueue.begin(), g_captureQueue.begin() + g_captureReadOffset);
+			g_captureReadOffset = 0;
+		}
 	}
 	if (copied < length)
 	{

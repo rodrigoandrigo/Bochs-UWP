@@ -238,9 +238,7 @@
     <ClCompile Include="..\iodev\network\e1000.cc" />
     <ClCompile Include="..\iodev\network\eth_null.cc" />
     <ClCompile Include="..\iodev\network\eth_slirp.cc" />
-    <ClCompile Include="..\iodev\network\eth_socket.cc">
-      <ExcludedFromBuild Condition="'$(UseUwpCoreRuntime)'=='true'">true</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="..\iodev\network\eth_socket.cc" />
     <ClCompile Include="..\iodev\network\eth_vnet.cc" />
     <ClCompile Include="..\iodev\network\eth_win32.cc">
       <ExcludedFromBuild Condition="'$(UseUwpCoreRuntime)'=='true'">true</ExcludedFromBuild>
