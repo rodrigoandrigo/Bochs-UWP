@@ -411,33 +411,3 @@ The screen checks for `config` inside the selected slot and enables restore when
 a saved state exists. The problems panel also shows event count, session log,
 diagnostic summary, selected media, effective HDD mode, boot order, current
 save-state, sound and network state.
-
-## Current Limitations
-
-- The `uwp://...` path covers raw HDD, raw floppy and ISO/CDR/TOAST access
-  through `IRandomAccessStream`. Formats that depend on multiple auxiliary
-  files, such as some VMDK layouts, may still require copying to `LocalFolder`
-  or keeping related files accessible together through the original format
-  backend.
-- Live VVFAT shared folders depend on Windows file-system permission for the
-  app. If the privacy setting blocks the real path, selection fails before boot
-  instead of letting the Bochs core crash during startup.
-- The shared VVFAT disk is intentionally read-only. Guest writes are rejected by
-  the image backend, and the original host folder is not modified.
-- Floppy through `uwp://...` depends on the image size to detect the type. An
-  image with a non-standard size will not be mounted as a bootable floppy.
-- VHD/VDI/VMDK images still use the corresponding Bochs image backends when
-  copied or located through a traditional file path; brokered `uwp` mode is
-  intended for raw images.
-- The `LocalFolder` fallback is still used when `FutureAccessList` does not
-  accept the file or when the format backend requires normal path-based access.
-- Audio input depends on Windows microphone permission and the default capture
-  device. If Windows denies permission, the guest receives silence.
-- MIDI depends on the UWP MIDI synthesizer available on the system.
-- VNC/RFB output is remote-only. The UWP surface shows connection status, but
-  guest input should be sent from the VNC client.
-- RFB currently exposes the native Bochs security-none mode; do not expose the
-  listening port on untrusted networks.
-- The UI is still C++/CX/XAML in the DirectX template style. The native
-  boundaries (`BochsUwpBridge`, renderer and runtime) allow a future migration
-  to C++/WinRT without changing the `uwp_dx` backend.
