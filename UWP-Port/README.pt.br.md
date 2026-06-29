@@ -411,35 +411,3 @@ A tela verifica `config` dentro do slot selecionado e habilita restauracao quand
 um estado salvo existe. O painel de problemas tambem mostra contador de eventos,
 log da sessao, resumo de diagnostico, midias selecionadas, modo efetivo do HDD,
 boot order, save-state atual, som e rede.
-
-## Limitacoes Atuais
-
-- O caminho `uwp://...` cobre HDD raw, floppy raw e ISO/CDR/TOAST por
-  `IRandomAccessStream`. Formatos que dependem de multiplos arquivos auxiliares,
-  como alguns layouts VMDK, ainda podem exigir copia para `LocalFolder` ou que
-  os arquivos relacionados estejam acessiveis juntos pelo formato original.
-- Pastas VVFAT vivas dependem da permissao de sistema de arquivos do Windows
-  para o app. Se a configuracao de privacidade bloquear o caminho real, a
-  selecao falha antes do boot em vez de deixar o core Bochs cair durante a
-  inicializacao.
-- O disco VVFAT compartilhado e propositalmente somente leitura. Escritas do
-  guest sao rejeitadas pelo backend de imagem, e a pasta original do host nao e
-  modificada.
-- Floppy via `uwp://...` depende do tamanho da imagem para detectar o tipo. Uma
-  imagem com tamanho nao padronizado nao sera montada como floppy bootavel.
-- Imagens VHD/VDI/VMDK continuam usando os backends de imagem correspondentes do
-  Bochs quando sao copiadas/localizadas em caminho de arquivo tradicional; o
-  modo brokered `uwp` e voltado a imagens raw.
-- O fallback para `LocalFolder` ainda e usado quando o `FutureAccessList` nao
-  aceita o arquivo ou quando o backend de formato exige acesso por caminho
-  normal.
-- Entrada de audio depende da permissao de microfone do Windows e do dispositivo
-  de captura padrao. Se o Windows negar permissao, o guest recebe silencio.
-- MIDI depende do sintetizador MIDI UWP disponivel no sistema.
-- A saida VNC/RFB e remota. A superficie UWP mostra status de conexao, mas a
-  entrada do guest deve ser enviada pelo cliente VNC.
-- O RFB expoe atualmente o modo nativo sem autenticacao do Bochs; nao exponha a
-  porta em redes nao confiaveis.
-- A UI ainda e C++/CX/XAML no estilo template DirectX; as fronteiras nativas
-  (`BochsUwpBridge`, renderer e runtime) permitem migracao futura para
-  C++/WinRT sem mudar o backend `uwp_dx`.
